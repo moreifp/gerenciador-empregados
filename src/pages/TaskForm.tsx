@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TaskType } from '@/types';
-import { initialEmployees } from '@/data/mockData';
+// import { initialEmployees } from '@/data/mockData';
+import { supabase } from '@/lib/supabase';
 
 export default function TaskForm() {
     const navigate = useNavigate();
@@ -35,7 +36,15 @@ export default function TaskForm() {
         photoPreview: '' as string | null
     });
 
+    const [employees, setEmployees] = useState<{ id: string, name: string }[]>([]);
+
     useEffect(() => {
+        const fetchEmployees = async () => {
+            const { data } = await supabase.from('employees').select('id, name').eq('active', true);
+            if (data) setEmployees(data);
+        };
+        fetchEmployees();
+
         // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -221,7 +230,7 @@ export default function TaskForm() {
                                 required
                             >
                                 <option value="">Selecione um funcionário</option>
-                                {initialEmployees.map(emp => (
+                                {employees.map(emp => (
                                     <option key={emp.id} value={emp.id}>{emp.name}</option>
                                 ))}
                             </select>
@@ -310,7 +319,7 @@ export default function TaskForm() {
                         Salvar Tarefa
                     </Button>
                 </div>
-            </form>
-        </div>
+            </form >
+        </div >
     );
 }
