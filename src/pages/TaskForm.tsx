@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X } from 'lucide-react';
+import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TaskType } from '@/types';
-// import { initialEmployees } from '@/data/mockData';
 import { supabase } from '@/lib/supabase';
 
 export default function TaskForm() {
@@ -20,8 +19,7 @@ export default function TaskForm() {
     const recognitionRef = useRef<any>(null);
 
     // Camera State
-    const [isCameraOpen] = useState(false);
-    // const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
 
@@ -74,6 +72,13 @@ export default function TaskForm() {
                 }
             };
         }
+
+        // Cleanup on unmount
+        return () => {
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -105,6 +110,40 @@ export default function TaskForm() {
                 setFormData(prev => ({ ...prev, photoPreview: reader.result as string }));
             };
             reader.readAsDataURL(file);
+        }
+    };
+
+    const startCamera = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+            streamRef.current = stream;
+            setIsCameraOpen(true);
+        } catch (err) {
+            console.error('Error accessing camera:', err);
+            alert('Não foi possível acessar a câmera.');
+        }
+    };
+
+    const stopCamera = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        setIsCameraOpen(false);
+    };
+
+    const capturePhoto = () => {
+        if (videoRef.current) {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoRef.current.videoWidth;
+            canvas.height = videoRef.current.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(videoRef.current, 0, 0);
+                const photoData = canvas.toDataURL('image/jpeg');
+                setFormData(prev => ({ ...prev, photoPreview: photoData }));
+                stopCamera();
+            }
         }
     };
 
@@ -197,24 +236,46 @@ export default function TaskForm() {
                             </div>
                         </div>
 
-                        {/* Photo Upload */}
+                        {/* Photo Upload & Camera */}
                         <div>
                             <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
 
-                            {!formData.photoPreview ? (
-                                <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative">
-                                    <ImageIcon className="h-10 w-10 mb-2 opacity-50" />
-                                    <p className="text-sm">Clique para adicionar uma foto</p>
-                                    <Input
-                                        type="file"
-                                        accept="image/*"
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                        onChange={handlePhotoChange}
-                                    />
+                            {!formData.photoPreview && !isCameraOpen ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Upload Box */}
+                                    <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
+                                        <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
+                                        <p className="text-xs font-medium">Enviar Foto</p>
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                            onChange={handlePhotoChange}
+                                        />
+                                    </div>
+
+                                    {/* Camera Box */}
+                                    <div
+                                        className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
+                                        onClick={startCamera}
+                                    >
+                                        <Camera className="h-8 w-8 mb-2 opacity-50" />
+                                        <p className="text-xs font-medium">Tirar Foto Agora</p>
+                                    </div>
+                                </div>
+                            ) : isCameraOpen ? (
+                                <div className="relative rounded-lg overflow-hidden border bg-black">
+                                    <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover"></video>
+                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                                        <Button variant="secondary" onClick={stopCamera} type="button">Cancelar</Button>
+                                        <Button onClick={capturePhoto} type="button" className="bg-white text-black hover:bg-gray-200">
+                                            <Camera className="mr-2 h-4 w-4" /> Capturar
+                                        </Button>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="relative rounded-lg overflow-hidden border">
-                                    <img src={formData.photoPreview} alt="Preview" className="w-full h-64 object-cover" />
+                                    <img src={formData.photoPreview!} alt="Preview" className="w-full h-64 object-cover" />
                                     <Button
                                         type="button"
                                         variant="destructive"
