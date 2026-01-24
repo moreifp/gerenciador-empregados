@@ -1,154 +1,89 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle2, Clock, AlertCircle, XCircle } from 'lucide-react';
-import { Task } from '@/types';
-import { useState, useEffect } from 'react';
-
-// Mock Data (duplicated for now, ideally in a context)
-const initialTasks: Task[] = [
-    {
-        id: '1',
-        title: 'Limpar Piscina',
-        description: 'Aspirar o fundo e medir o pH.',
-        assignedTo: '2',
-        type: 'routine',
-        dueDate: new Date().toISOString().split('T')[0],
-        status: 'pending',
-        createdAt: '2023-11-19'
-    },
-    {
-        id: '2',
-        title: 'Preparar almoço',
-        description: 'Churrasco.',
-        assignedTo: '1',
-        type: 'one_off',
-        dueDate: new Date().toISOString().split('T')[0],
-        status: 'in_progress',
-        createdAt: '2023-11-19'
-    },
-    {
-        id: '4',
-        title: 'Limpeza dos quartos',
-        description: 'Trocar roupa de cama.',
-        assignedTo: '1',
-        type: 'routine',
-        dueDate: new Date().toISOString().split('T')[0],
-        status: 'completed',
-        proof: { completedAt: '2023-11-19T10:00:00' },
-        createdAt: '2023-11-19'
-    }
-];
+import { Card, CardContent } from '@/components/ui/card';
+import { Plus, Trash2, User } from 'lucide-react';
+import { Employee } from '@/types';
+import { useState } from 'react';
+import { initialEmployees } from '@/data/mockData';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 export default function Dashboard() {
-    const [tasks] = useState<Task[]>(initialTasks);
-    const [currentTime, setCurrentTime] = useState(new Date());
+    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const navigate = useNavigate();
 
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const stats = {
-        pending: tasks.filter(t => t.status === 'pending').length,
-        in_progress: tasks.filter(t => t.status === 'in_progress').length,
-        completed: tasks.filter(t => t.status === 'completed').length,
-        blocked: tasks.filter(t => t.status === 'blocked').length,
+    const handleDelete = (id: string, e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent card click
+        if (confirm('Tem certeza que deseja remover este funcionário?')) {
+            setEmployees(employees.filter(emp => emp.id !== id));
+        }
     };
-
-    const todayStr = currentTime.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
     return (
         <div className="space-y-8">
-            <div className="flex justify-between items-end border-b pb-4">
+            <div className="flex justify-between items-center border-b pb-4">
                 <div>
                     <h2 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                        Painel do Dia
+                        Minha Equipe
                     </h2>
-                    <p className="text-xl text-muted-foreground capitalize mt-2">
-                        {todayStr}
+                    <p className="text-xl text-muted-foreground mt-2">
+                        Gerencie os funcionários da casa
                     </p>
                 </div>
-                <div className="text-right">
-                    <div className="text-3xl font-bold font-mono">
-                        {currentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+                {/* Add New Employee Card */}
+                <Card
+                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group min-h-[250px]"
+                    onClick={() => navigate('/employees/new')}
+                >
+                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform mb-4">
+                        <Plus className="h-8 w-8 text-primary" />
                     </div>
-                </div>
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-4">
-                <Card className="bg-yellow-100 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-900">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-yellow-800 dark:text-yellow-400">A Fazer</CardTitle>
-                        <Clock className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-yellow-700 dark:text-yellow-300">{stats.pending}</div>
-                        <p className="text-xs text-yellow-600/80 dark:text-yellow-400/80">Tarefas pendentes</p>
-                    </CardContent>
+                    <h3 className="text-lg font-semibold text-primary">Adicionar Novo</h3>
+                    <p className="text-sm text-muted-foreground text-center mt-2">Cadastrar um novo funcionário</p>
                 </Card>
 
-                <Card className="bg-blue-100 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-400">Em Andamento</CardTitle>
-                        <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-blue-700 dark:text-blue-300">{stats.in_progress}</div>
-                        <p className="text-xs text-blue-600/80 dark:text-blue-400/80">Em execução agora</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-green-100 dark:bg-green-900/20 border-green-200 dark:border-green-900">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-green-800 dark:text-green-400">Concluídas</CardTitle>
-                        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-green-700 dark:text-green-300">{stats.completed}</div>
-                        <p className="text-xs text-green-600/80 dark:text-green-400/80">Finalizadas hoje</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="bg-red-100 dark:bg-red-900/20 border-red-200 dark:border-red-900">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-red-800 dark:text-red-400">Problemas</CardTitle>
-                        <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-red-700 dark:text-red-300">{stats.blocked}</div>
-                        <p className="text-xs text-red-600/80 dark:text-red-400/80">Requer atenção</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Activity Feed or List */}
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card className="col-span-2">
-                    <CardHeader>
-                        <CardTitle>Atividades Recentes</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {tasks.map((task) => (
-                                <div key={task.id} className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0">
-                                    <div className="space-y-1">
-                                        <p className="text-sm font-medium leading-none">{task.title}</p>
-                                        <p className="text-sm text-muted-foreground">{task.description}</p>
-                                    </div>
-                                    <div className={`px-2 py-1 rounded-full text-xs font-bold text-white
-                                    ${task.status === 'completed' ? 'bg-green-500' :
-                                            task.status === 'in_progress' ? 'bg-blue-500' :
-                                                task.status === 'blocked' ? 'bg-red-500' : 'bg-yellow-500'
-                                        }`}>
-                                        {task.status === 'completed' ? 'Concluído' :
-                                            task.status === 'in_progress' ? 'Executando' :
-                                                task.status === 'blocked' ? 'Travado' : 'Pendente'}
-                                    </div>
-                                </div>
-                            ))}
+                {/* Employee List */}
+                {employees.map((employee) => (
+                    <Card
+                        key={employee.id}
+                        className="relative group overflow-hidden hover:shadow-lg transition-all min-h-[250px] flex flex-col"
+                    >
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <Button
+                                variant="destructive"
+                                size="icon"
+                                className="h-8 w-8 rounded-full shadow-sm"
+                                onClick={(e) => handleDelete(employee.id, e)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
                         </div>
-                    </CardContent>
-                </Card>
+
+                        <CardContent className="flex flex-col items-center justify-center flex-1 p-6 text-center">
+                            <div
+                                className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center mb-4 ring-4 ring-background shadow-md cursor-pointer hover:scale-105 hover:ring-primary transition-all duration-300"
+                                onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
+                                title="Ver tarefas deste funcionário"
+                            >
+                                {employee.photoUrl ? (
+                                    <img src={employee.photoUrl} alt={employee.name} className="h-24 w-24 rounded-full object-cover" />
+                                ) : (
+                                    <User className="h-12 w-12 text-primary/60" />
+                                )}
+                            </div>
+
+                            <h3 className="text-xl font-bold truncate w-full">{employee.name}</h3>
+                            <p className="text-sm font-medium text-primary/80 mb-2">{employee.role}</p>
+
+                            <div className="mt-4 w-full pt-4 border-t text-sm text-muted-foreground flex flex-col gap-1">
+                                <span className="truncate">{employee.phone}</span>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
         </div>
     );
 }
+
