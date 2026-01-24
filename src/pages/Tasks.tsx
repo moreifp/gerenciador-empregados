@@ -63,7 +63,7 @@ export default function Tasks() {
     };
 
     const isEmployeeView = role === 'employee';
-    const canCreateTask = role === 'admin' || role === 'kiosk';
+    const canCreateTask = role === 'admin'; // Only admin can create tasks
 
     // Get task count per employee
     const getEmployeeTaskCount = (empId: string) => {
@@ -74,6 +74,20 @@ export default function Tasks() {
     if (selectedEmployeeId) {
         const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
         let tasks = baseTasks.filter(t => t.assignedTo === selectedEmployeeId);
+
+        // For kiosk, filter tasks to show only today + next 7 days
+        if (role === 'kiosk') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+
+            tasks = tasks.filter(t => {
+                const taskDate = new Date(t.dueDate);
+                taskDate.setHours(0, 0, 0, 0);
+                return taskDate >= today && taskDate <= nextWeek;
+            });
+        }
 
         // Apply text filter
         if (filter) {

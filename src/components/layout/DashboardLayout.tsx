@@ -2,8 +2,11 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { LayoutDashboard, CheckSquare, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Sidebar = () => {
+    const { logout } = useAuth();
+
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: CheckSquare, label: 'Tarefas', path: '/tasks' },
@@ -38,7 +41,10 @@ const Sidebar = () => {
             </nav>
 
             <div className="p-4 border-t border-border">
-                <button className="flex items-center space-x-3 px-4 py-3 w-full text-muted-foreground hover:text-destructive transition-colors">
+                <button
+                    onClick={logout}
+                    className="flex items-center space-x-3 px-4 py-3 w-full text-muted-foreground hover:text-destructive transition-colors"
+                >
                     <LogOut className="w-5 h-5" />
                     <span className="font-medium">Sair</span>
                 </button>
@@ -48,11 +54,19 @@ const Sidebar = () => {
 };
 
 export const DashboardLayout = () => {
+    const { role } = useAuth();
+    const isKiosk = role === 'kiosk';
+
     return (
         <div className="flex h-screen bg-background text-foreground">
-            <Sidebar />
+            {/* Only show sidebar for admin and employee */}
+            {!isKiosk && <Sidebar />}
+
             <main className="flex-1 overflow-auto">
-                <div className="p-8 max-w-7xl mx-auto">
+                <div className={cn(
+                    "max-w-7xl mx-auto",
+                    isKiosk ? "p-6 sm:p-8 md:p-12" : "p-8"
+                )}>
                     <Outlet />
                 </div>
             </main>

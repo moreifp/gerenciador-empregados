@@ -15,6 +15,7 @@ export default function Dashboard() {
 
     // Only admin can add/remove employees
     const canManageEmployees = role === 'admin';
+    const isKiosk = role === 'kiosk';
 
     useEffect(() => {
         fetchEmployees();
@@ -25,6 +26,7 @@ export default function Dashboard() {
             const { data, error } = await supabase
                 .from('employees')
                 .select('*')
+                .eq('active', true)
                 .order('name');
 
             if (error) throw error;
@@ -52,6 +54,57 @@ export default function Dashboard() {
         }
     };
 
+    // Kiosk View - Simple grid of employee photos
+    if (isKiosk) {
+        return (
+            <div className="space-y-8">
+                <div className="text-center">
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-3">
+                        Gerenciador Diário
+                    </h1>
+                    <p className="text-lg sm:text-xl text-muted-foreground">
+                        Selecione um funcionário para ver suas tarefas
+                    </p>
+                </div>
+
+                {loading ? (
+                    <div className="text-center py-20 text-muted-foreground text-xl">Carregando...</div>
+                ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8">
+                        {employees.map((employee) => (
+                            <button
+                                key={employee.id}
+                                onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
+                                className="flex flex-col items-center gap-4 p-6 rounded-2xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                            >
+                                <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full overflow-hidden border-4 border-white shadow-xl group-hover:scale-105 transition-transform">
+                                    {employee.photo ? (
+                                        <img src={employee.photo} alt={employee.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                        <div className="h-full w-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center">
+                                            <User className="h-12 w-12 sm:h-16 sm:w-16 text-primary/60" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-center">
+                                    <p className="font-bold text-base sm:text-lg leading-tight">{employee.name}</p>
+                                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">{employee.role}</p>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {!loading && employees.length === 0 && (
+                    <p className="text-center text-muted-foreground py-20 text-lg">
+                        Nenhum funcionário cadastrado.
+                    </p>
+                )}
+            </div>
+        );
+    }
+
+    // Admin/Employee View - Full management interface
     return (
         <div className="space-y-6 sm:space-y-8">
             <div className="flex justify-between items-center border-b pb-3 sm:pb-4">
