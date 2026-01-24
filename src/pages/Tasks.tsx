@@ -217,7 +217,7 @@ export default function Tasks() {
             </div>
 
             <div className="flex-1 overflow-x-auto pb-4">
-                <div className={`flex gap-6 h-full ${isEmployeeView ? 'w-full max-w-2xl mx-auto' : 'min-w-[1000px]'}`}>
+                <div className={`flex gap-6 h-full ${isEmployeeView ? 'w-full max-w-2xl mx-auto flex-col' : 'flex-col lg:flex-row lg:min-w-[1000px]'}`}>
                     {columns.map(col => {
                         // Filter tasks for this column
                         const columnTasks = visibleTasks.filter(task => {
@@ -231,7 +231,7 @@ export default function Tasks() {
                         const completedTasks = columnTasks.filter(t => t.status === 'completed');
 
                         return (
-                            <div key={col.id} className="flex-1 flex flex-col min-w-[300px]">
+                            <div key={col.id} className="flex-1 flex flex-col w-full min-w-0 lg:min-w-[300px]">
                                 <div className="flex items-center gap-3 mb-4 border-b pb-3 border-border">
                                     <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
                                         {col.photo ? (

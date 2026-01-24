@@ -1,19 +1,47 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Trash2, User } from 'lucide-react';
 import { Employee } from '@/types';
-import { useState } from 'react';
-import { initialEmployees } from '@/data/mockData';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/lib/supabase';
 
 export default function Dashboard() {
-    const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
-    const handleDelete = (id: string, e: React.MouseEvent) => {
+    useEffect(() => {
+        fetchEmployees();
+    }, []);
+
+    const fetchEmployees = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('employees')
+                .select('*')
+                .order('name');
+
+            if (error) throw error;
+            if (data) setEmployees(data as any);
+        } catch (error) {
+            console.error('Error fetching employees:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent card click
         if (confirm('Tem certeza que deseja remover este funcionário?')) {
-            setEmployees(employees.filter(emp => emp.id !== id));
+            try {
+                const { error } = await supabase.from('employees').delete().eq('id', id);
+                if (error) throw error;
+                setEmployees(employees.filter(emp => emp.id !== id));
+            } catch (err) {
+                console.error('Error deleting:', err);
+                alert('Erro ao deletar.');
+            }
         }
     };
 
@@ -44,7 +72,9 @@ export default function Dashboard() {
                 </Card>
 
                 {/* Employee List */}
-                {employees.map((employee) => (
+                {loading ? (
+                    <div className="md:col-span-3 text-center py-10 text-muted-foreground">Carregando...</div>
+                ) : employees.map((employee) => (
                     <Card
                         key={employee.id}
                         className="relative group overflow-hidden hover:shadow-lg transition-all min-h-[250px] flex flex-col"
@@ -66,8 +96,8 @@ export default function Dashboard() {
                                 onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
                                 title="Ver tarefas deste funcionário"
                             >
-                                {employee.photoUrl ? (
-                                    <img src={employee.photoUrl} alt={employee.name} className="h-24 w-24 rounded-full object-cover" />
+                                {employee.photo ? (
+                                    <img src={employee.photo} alt={employee.name} className="h-24 w-24 rounded-full object-cover" />
                                 ) : (
                                     <User className="h-12 w-12 text-primary/60" />
                                 )}
