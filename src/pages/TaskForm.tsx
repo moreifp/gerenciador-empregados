@@ -143,22 +143,22 @@ export default function TaskForm() {
     };
 
     return (
-        <div className="space-y-6 max-w-3xl mx-auto pb-10">
-            <div className="flex items-center gap-4">
+        <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto pb-10 px-4 sm:px-0">
+            <div className="flex items-center gap-3 sm:gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate('/tasks')}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
                         {isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm sm:text-base text-muted-foreground">
                         Preencha os detalhes abaixo
                     </p>
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                 {/* Main Content */}
                 <Card>
                     <CardHeader className="pb-2">
@@ -326,11 +326,11 @@ export default function TaskForm() {
                     </Card>
                 </div>
 
-                <div className="flex justify-end gap-4 pt-4">
-                    <Button type="button" variant="outline" size="lg" onClick={() => navigate('/tasks')}>
+                <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
+                    <Button type="button" variant="outline" size="lg" onClick={() => navigate('/tasks')} className="w-full sm:w-auto">
                         Cancelar
                     </Button>
-                    <Button type="submit" size="lg" className="px-8">
+                    <Button type="submit" size="lg" className="w-full sm:w-auto sm:px-8">
                         <Save className="mr-2 h-4 w-4" />
                         Salvar Tarefa
                     </Button>

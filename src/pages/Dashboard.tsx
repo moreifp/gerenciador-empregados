@@ -46,19 +46,19 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="space-y-8">
-            <div className="flex justify-between items-center border-b pb-4">
+        <div className="space-y-6 sm:space-y-8">
+            <div className="flex justify-between items-center border-b pb-3 sm:pb-4">
                 <div>
-                    <h2 className="text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
                         Minha Equipe
                     </h2>
-                    <p className="text-xl text-muted-foreground mt-2">
+                    <p className="text-base sm:text-lg md:text-xl text-muted-foreground mt-1 sm:mt-2">
                         Gerencie os funcionários da casa
                     </p>
                 </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {/* Add New Employee Card */}
                 <Card
                     className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group min-h-[250px]"

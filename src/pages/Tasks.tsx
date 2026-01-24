@@ -185,27 +185,30 @@ export default function Tasks() {
     }
 
     return (
-        <div className="space-y-6 h-full flex flex-col">
-            <div className="flex justify-between items-center">
+        <div className="space-y-4 sm:space-y-6 h-full flex flex-col">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
                         {isEmployeeView ? `Olá, ${user?.name}` : 'Quadro de Tarefas'}
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">
                         {isEmployeeView
                             ? 'Aqui estão suas tarefas para os próximos 7 dias.'
                             : 'Visão geral do sistema.'}
                     </p>
                 </div>
                 {canCreateTask && (
-                    <Button onClick={() => navigate(`/tasks/new${employeeId ? `?employeeId=${employeeId}` : ''}`)}>
+                    <Button
+                        onClick={() => navigate(`/tasks/new${employeeId ? `?employeeId=${employeeId}` : ''}`)}
+                        className="w-full sm:w-auto"
+                    >
                         <Plus className="mr-2 h-4 w-4" /> Nova Tarefa
                     </Button>
                 )}
             </div>
 
             <div className="flex items-center space-x-2">
-                <div className="relative flex-1 max-w-sm">
+                <div className="relative flex-1">
                     <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder="Pesquisar tarefas..."

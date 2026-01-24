@@ -65,7 +65,7 @@ export default function Login() {
                             ) : employees.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground">Nenhum funcionário encontrado. Entre como Admin para cadastrar.</div>
                             ) : (
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {employees.map(emp => (
                                         <button
                                             key={emp.id}

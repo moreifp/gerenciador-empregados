@@ -149,31 +149,31 @@ export default function EmployeeForm() {
     };
 
     return (
-        <div className="space-y-6 max-w-3xl mx-auto">
-            <div className="flex items-center gap-4">
+        <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto px-4 sm:px-0">
+            <div className="flex items-center gap-3 sm:gap-4">
                 <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
                     <ArrowLeft className="h-5 w-5" />
                 </Button>
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
                         {isEditing ? 'Editar Funcionário' : 'Novo Funcionário'}
                     </h2>
-                    <p className="text-muted-foreground">
+                    <p className="text-sm sm:text-base text-muted-foreground">
                         {isEditing ? 'Atualize os dados do funcionário' : 'Cadastre um novo membro da equipe'}
                     </p>
                 </div>
             </div>
 
             <form onSubmit={handleSubmit}>
-                <div className="grid gap-6">
+                <div className="grid gap-4 sm:gap-6">
                     <Card>
                         <CardHeader>
                             <CardTitle>Dados do Funcionário</CardTitle>
                             <CardDescription>Informações básicas e foto de identificação.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div className="md:col-span-2">
+                        <CardContent className="space-y-4 sm:space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="sm:col-span-2">
                                     <label className="text-sm font-medium mb-2 block">Nome Completo</label>
                                     <Input name="name" placeholder="Ex: Maria da Silva" value={formData.name} onChange={handleChange} required />
                                 </div>
@@ -192,7 +192,7 @@ export default function EmployeeForm() {
                                 <label className="text-sm font-medium mb-2 block">Foto do Funcionário</label>
 
                                 {!formData.photoPreview && !isCameraOpen ? (
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         {/* Upload Box */}
                                         <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
                                             <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
@@ -242,11 +242,11 @@ export default function EmployeeForm() {
                         </CardContent>
                     </Card>
 
-                    <div className="flex justify-end gap-4">
-                        <Button type="button" variant="outline" onClick={() => navigate('/')}>
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4">
+                        <Button type="button" variant="outline" onClick={() => navigate('/')} className="w-full sm:w-auto">
                             Cancelar
                         </Button>
-                        <Button type="submit">
+                        <Button type="submit" className="w-full sm:w-auto">
                             <Save className="mr-2 h-4 w-4" />
                             Salvar Funcionário
                         </Button>
