@@ -5,11 +5,16 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
+    const { role } = useAuth();
+
+    // Only admin can add/remove employees
+    const canManageEmployees = role === 'admin';
 
     useEffect(() => {
         fetchEmployees();
@@ -33,6 +38,8 @@ export default function Dashboard() {
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation(); // Prevent card click
+        if (!canManageEmployees) return; // Extra safety check
+
         if (confirm('Tem certeza que deseja remover este funcionário?')) {
             try {
                 const { error } = await supabase.from('employees').delete().eq('id', id);
@@ -53,23 +60,25 @@ export default function Dashboard() {
                         Minha Equipe
                     </h2>
                     <p className="text-base sm:text-lg md:text-xl text-muted-foreground mt-1 sm:mt-2">
-                        Gerencie os funcionários da casa
+                        {canManageEmployees ? 'Gerencie os funcionários da casa' : 'Visualize a equipe'}
                     </p>
                 </div>
             </div>
 
             <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {/* Add New Employee Card */}
-                <Card
-                    className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group min-h-[250px]"
-                    onClick={() => navigate('/employees/new')}
-                >
-                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform mb-4">
-                        <Plus className="h-8 w-8 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-primary">Adicionar Novo</h3>
-                    <p className="text-sm text-muted-foreground text-center mt-2">Cadastrar um novo funcionário</p>
-                </Card>
+                {/* Add New Employee Card - Only for Admin */}
+                {canManageEmployees && (
+                    <Card
+                        className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-primary/20 hover:border-primary/50 hover:bg-primary/5 cursor-pointer transition-all group min-h-[250px]"
+                        onClick={() => navigate('/employees/new')}
+                    >
+                        <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform mb-4">
+                            <Plus className="h-8 w-8 text-primary" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-primary">Adicionar Novo</h3>
+                        <p className="text-sm text-muted-foreground text-center mt-2">Cadastrar um novo funcionário</p>
+                    </Card>
+                )}
 
                 {/* Employee List */}
                 {loading ? (
@@ -79,16 +88,19 @@ export default function Dashboard() {
                         key={employee.id}
                         className="relative group overflow-hidden hover:shadow-lg transition-all min-h-[250px] flex flex-col"
                     >
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                            <Button
-                                variant="destructive"
-                                size="icon"
-                                className="h-8 w-8 rounded-full shadow-sm"
-                                onClick={(e) => handleDelete(employee.id, e)}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
+                        {/* Delete Button - Only for Admin */}
+                        {canManageEmployees && (
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <Button
+                                    variant="destructive"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full shadow-sm"
+                                    onClick={(e) => handleDelete(employee.id, e)}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
 
                         <CardContent className="flex flex-col items-center justify-center flex-1 p-6 text-center">
                             <div
@@ -116,4 +128,3 @@ export default function Dashboard() {
         </div>
     );
 }
-
