@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Filter, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Filter, User, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskCard } from '@/components/tasks/TaskCard';
@@ -12,7 +12,7 @@ export default function Tasks() {
     const { user, role } = useAuth();
     const [baseTasks, setBaseTasks] = useState<Task[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
-    // const [loading, setLoading] = useState(true);
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
     const [filter, setFilter] = useState('');
     const [showCompleted, setShowCompleted] = useState(false);
@@ -23,16 +23,12 @@ export default function Tasks() {
     useEffect(() => {
         const fetchData = async () => {
             // Fetch Employees
-            const { data: empData } = await supabase.from('employees').select('*');
+            const { data: empData } = await supabase.from('employees').select('*').eq('active', true);
             if (empData) setEmployees(empData as any);
 
             // Fetch Tasks
             const { data: taskData } = await supabase.from('tasks').select('*');
             if (taskData) {
-                // Map snake_case to camelCase if needed, or update types. 
-                // For MVP, if schema matches types, great. 
-                // Schema uses: due_date, recurrence_type. Types use: dueDate, recurrenceType.
-                // We need to map it.
                 const mappedTasks: Task[] = taskData.map((t: any) => ({
                     id: t.id,
                     title: t.title,
@@ -53,148 +49,195 @@ export default function Tasks() {
                 }));
                 setBaseTasks(mappedTasks);
             }
-            // setLoading(false);
         };
         fetchData();
     }, []);
 
-
-    // Generate Recurring Instances
-    const generateRecurringInstances = (originalTasks: Task[]) => {
-        const generatedTasks: Task[] = [];
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const lookAheadDays = 14;
-
-        originalTasks.forEach(task => {
-            if (task.recurrenceType === 'none' || !task.recurrenceType) {
-                generatedTasks.push(task);
-                return;
-            }
-
-            const startDate = new Date(task.dueDate);
-            startDate.setHours(0, 0, 0, 0);
-
-            for (let i = 0; i <= lookAheadDays; i++) {
-                const currentDate = new Date(today);
-                currentDate.setDate(today.getDate() + i);
-
-                if (currentDate < startDate) continue;
-
-                let shouldAdd = false;
-                if (task.recurrenceType === 'daily') shouldAdd = true;
-                else if (task.recurrenceType === 'weekly') {
-                    const expectedDay = task.recurrenceDay !== undefined ? task.recurrenceDay : startDate.getDay();
-                    if (currentDate.getDay() === expectedDay) shouldAdd = true;
-                } else if (task.recurrenceType === 'monthly') {
-                    const expectedDate = task.recurrenceDay || startDate.getDate();
-                    if (currentDate.getDate() === expectedDate) shouldAdd = true;
-                }
-
-                if (shouldAdd) {
-                    generatedTasks.push({
-                        ...task,
-                        id: `${task.id}_${currentDate.toISOString().split('T')[0]}`,
-                        dueDate: currentDate.toISOString().split('T')[0],
-                        status: 'pending',
-                        title: task.title,
-                    });
-                }
-            }
-        });
-        return generatedTasks;
-    };
-
-    const tasks = generateRecurringInstances(baseTasks);
-    const [completedInstances, setCompletedInstances] = useState<Set<string>>(new Set());
-
-    const handleToggle = (taskId: string, newStatus: any) => {
-        if (newStatus === 'completed') {
-            setCompletedInstances(prev => new Set(prev).add(taskId));
-        } else {
-            setCompletedInstances(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(taskId);
-                return newSet;
-            });
+    const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+        const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
+        if (error) {
+            console.error('Error updating task:', error);
+            return;
         }
+        setBaseTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     };
 
-    // Apply completion status
-    const displayedTasks = tasks.map(t => ({
-        ...t,
-        status: completedInstances.has(t.id) ? 'completed' : t.status === 'completed' ? 'completed' : 'pending'
-    })) as Task[];
-
-    // --- Permissions ---
-    const canCreateTask = role === 'admin';
     const isEmployeeView = role === 'employee';
+    const canCreateTask = role === 'admin' || role === 'kiosk';
 
-    // --- Filtering Logic ---
-    let visibleTasks = displayedTasks.filter(t =>
-        t.title.toLowerCase().includes(filter.toLowerCase()) ||
-        t.description.toLowerCase().includes(filter.toLowerCase())
-    );
+    // Get task count per employee
+    const getEmployeeTaskCount = (empId: string) => {
+        return baseTasks.filter(t => t.assignedTo === empId && t.status !== 'completed').length;
+    };
 
-    // Filter by Date for Employees (Next 7 Days)
-    if (isEmployeeView && user) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+    // If an employee is selected (mobile view), show their tasks
+    if (selectedEmployeeId) {
+        const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
+        let tasks = baseTasks.filter(t => t.assignedTo === selectedEmployeeId);
 
-        const nextWeek = new Date(today);
-        nextWeek.setDate(today.getDate() + 7);
+        // Apply text filter
+        if (filter) {
+            tasks = tasks.filter(t =>
+                t.title.toLowerCase().includes(filter.toLowerCase()) ||
+                t.description.toLowerCase().includes(filter.toLowerCase())
+            );
+        }
 
-        visibleTasks = visibleTasks.filter(t => {
-            const taskDate = new Date(t.dueDate);
-            // Handle timezones loosely by comparing ISO strings prefix or using timestamps
-            // Just basic comparison:
-            return taskDate >= today && taskDate <= nextWeek;
-        });
+        // Apply completed filter
+        if (!showCompleted) {
+            tasks = tasks.filter(t => t.status !== 'completed');
+        }
+
+        return (
+            <div className="space-y-4 h-full flex flex-col px-4 sm:px-0">
+                {/* Header with back button */}
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSelectedEmployeeId(null)}
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div className="flex items-center gap-3 flex-1">
+                        {selectedEmployee?.photo && (
+                            <div className="h-12 w-12 rounded-full overflow-hidden border-2 border-primary shadow-sm">
+                                <img src={selectedEmployee.photo} alt={selectedEmployee.name} className="h-full w-full object-cover" />
+                            </div>
+                        )}
+                        <div>
+                            <h2 className="text-xl font-bold">{selectedEmployee?.name}</h2>
+                            <p className="text-sm text-muted-foreground">{tasks.length} tarefas</p>
+                        </div>
+                    </div>
+                    {canCreateTask && (
+                        <Button
+                            size="icon"
+                            onClick={() => navigate(`/tasks/new?employeeId=${selectedEmployeeId}`)}
+                        >
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+
+                {/* Search */}
+                <div className="flex items-center space-x-2">
+                    <div className="relative flex-1">
+                        <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Pesquisar tarefas..."
+                            className="pl-8"
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                {/* Show completed toggle */}
+                <div className="flex items-center space-x-2">
+                    <input
+                        type="checkbox"
+                        id="showCompleted"
+                        checked={showCompleted}
+                        onChange={(e) => setShowCompleted(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <label htmlFor="showCompleted" className="text-sm text-muted-foreground">
+                        Mostrar concluídas
+                    </label>
+                </div>
+
+                {/* Task list */}
+                <div className="flex-1 overflow-auto pb-6 space-y-3">
+                    {tasks.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">Nenhuma tarefa encontrada</p>
+                    ) : (
+                        tasks.map(task => (
+                            <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+                        ))
+                    )}
+                </div>
+            </div>
+        );
     }
 
-    // --- Column Generation ---
-    let columns = [];
-
+    // For employee view, auto-select their tasks
     if (isEmployeeView && user) {
-        // Employee sees ONLY their own column
-        // We find the employee data matching the logged in user
-        const empParams = employees.find(e => e.id === user.id);
-        const columnLabel = empParams ? empParams.name : user.name;
+        let tasks = baseTasks.filter(t => t.assignedTo === user.id);
 
-        columns = [{
-            id: user.id,
-            label: columnLabel,
-            photo: user.photo,
-            role: 'Suas Tarefas',
-            isUnassigned: false
-        }];
-    } else {
-        // Admin/Kiosk sees everyone + unassigned
-        const employeeColumns = employees.map(emp => ({
-            id: emp.id,
-            label: emp.name,
-            photo: emp.photo,
-            role: emp.role,
-            isUnassigned: false
-        }));
+        // Apply text filter
+        if (filter) {
+            tasks = tasks.filter(t =>
+                t.title.toLowerCase().includes(filter.toLowerCase()) ||
+                t.description.toLowerCase().includes(filter.toLowerCase())
+            );
+        }
 
-        columns = [
-            ...employeeColumns,
-            { id: 'unassigned', label: 'Sem Responsável', photo: null, role: 'Geral', isUnassigned: true }
-        ];
+        // Apply completed filter
+        if (!showCompleted) {
+            tasks = tasks.filter(t => t.status !== 'completed');
+        }
+
+        return (
+            <div className="space-y-4 sm:space-y-6 h-full flex flex-col px-4 sm:px-0">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                    <div>
+                        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
+                            Olá, {user?.name}
+                        </h2>
+                        <p className="text-sm sm:text-base text-muted-foreground mt-1">
+                            Aqui estão suas tarefas.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                    <div className="relative flex-1">
+                        <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            placeholder="Pesquisar tarefas..."
+                            className="pl-8"
+                            value={filter}
+                            onChange={(e) => setFilter(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            id="showCompleted"
+                            checked={showCompleted}
+                            onChange={(e) => setShowCompleted(e.target.checked)}
+                            className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <label htmlFor="showCompleted" className="text-sm text-muted-foreground">
+                            Mostrar concluídas
+                        </label>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-auto pb-6 space-y-3">
+                    {tasks.map(task => (
+                        <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+                    ))}
+                    {tasks.length === 0 && (
+                        <p className="text-center text-muted-foreground py-8">Nenhuma tarefa</p>
+                    )}
+                </div>
+            </div>
+        );
     }
 
+    // Default view (Admin/Kiosk) - Employee Grid
     return (
-        <div className="space-y-4 sm:space-y-6 h-full flex flex-col">
+        <div className="space-y-6 h-full flex flex-col px-4 sm:px-0">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
                 <div>
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-                        {isEmployeeView ? `Olá, ${user?.name}` : 'Quadro de Tarefas'}
-                    </h2>
+                    <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Quadro de Tarefas</h2>
                     <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                        {isEmployeeView
-                            ? 'Aqui estão suas tarefas para os próximos 7 dias.'
-                            : 'Visão geral do sistema.'}
+                        Selecione um funcionário para ver suas tarefas.
                     </p>
                 </div>
                 {canCreateTask && (
@@ -207,99 +250,46 @@ export default function Tasks() {
                 )}
             </div>
 
-            <div className="flex items-center space-x-2">
-                <div className="relative flex-1">
-                    <Filter className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        placeholder="Pesquisar tarefas..."
-                        className="pl-8"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <div className="flex-1 overflow-x-auto pb-4">
-                <div className={`flex gap-6 h-full ${isEmployeeView ? 'w-full max-w-2xl mx-auto flex-col' : 'flex-col lg:flex-row lg:min-w-[1000px]'}`}>
-                    {columns.map(col => {
-                        // Filter tasks for this column
-                        const columnTasks = visibleTasks.filter(task => {
-                            if (col.isUnassigned) {
-                                return !task.assignedTo;
-                            }
-                            return task.assignedTo === col.id;
-                        });
-
-                        const pendingTasks = columnTasks.filter(t => t.status !== 'completed');
-                        const completedTasks = columnTasks.filter(t => t.status === 'completed');
-
-                        return (
-                            <div key={col.id} className="flex-1 flex flex-col w-full min-w-0 lg:min-w-[300px]">
-                                <div className="flex items-center gap-3 mb-4 border-b pb-3 border-border">
-                                    <div className="h-12 w-12 rounded-full bg-accent flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-                                        {col.photo ? (
-                                            <img src={col.photo} alt={col.label} className="h-full w-full object-cover" />
-                                        ) : (
-                                            <User className="h-6 w-6 text-muted-foreground" />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-lg leading-none">{col.label}</h3>
-                                        <p className="text-xs text-muted-foreground font-medium mt-1 uppercase tracking-wide">{col.role}</p>
-                                    </div>
-                                    <span className="ml-auto text-sm font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">
-                                        {pendingTasks.length}
-                                    </span>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-                                    {/* Pending Tasks */}
-                                    {pendingTasks.length > 0 ? (
-                                        pendingTasks.map(task => (
-                                            <TaskCard
-                                                key={task.id}
-                                                task={task}
-                                                onStatusChange={handleToggle}
-                                            />
-                                        ))
+            {/* Employee Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                {employees.map(emp => {
+                    const taskCount = getEmployeeTaskCount(emp.id);
+                    return (
+                        <button
+                            key={emp.id}
+                            onClick={() => setSelectedEmployeeId(emp.id)}
+                            className="flex flex-col items-center gap-3 p-4 rounded-lg border-2 border-border hover:border-primary hover:bg-primary/5 transition-all group"
+                        >
+                            <div className="relative">
+                                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full overflow-hidden border-4 border-white shadow-lg group-hover:scale-105 transition-transform">
+                                    {emp.photo ? (
+                                        <img src={emp.photo} alt={emp.name} className="h-full w-full object-cover" />
                                     ) : (
-                                        <div className="py-8 text-center text-muted-foreground text-sm italic border-2 border-dashed border-border/50 rounded-md">
-                                            Tudo em dia! 🎉
-                                        </div>
-                                    )}
-
-                                    {/* Completed Tasks Accordion */}
-                                    {completedTasks.length > 0 && (
-                                        <div className="pt-4 border-t mt-4">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="w-full justify-between mb-2 text-muted-foreground hover:text-foreground"
-                                                onClick={() => setShowCompleted(!showCompleted)}
-                                            >
-                                                <span>Concluídas ({completedTasks.length})</span>
-                                                {showCompleted ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                            </Button>
-
-                                            {showCompleted && (
-                                                <div className="space-y-3 animate-in slide-in-from-top-2 fade-in duration-300">
-                                                    {completedTasks.map(task => (
-                                                        <TaskCard
-                                                            key={task.id}
-                                                            task={task}
-                                                            onStatusChange={handleToggle}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
+                                        <div className="h-full w-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center">
+                                            <User className="h-10 w-10 text-primary/60" />
                                         </div>
                                     )}
                                 </div>
+                                {taskCount > 0 && (
+                                    <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shadow-md">
+                                        {taskCount}
+                                    </div>
+                                )}
                             </div>
-                        );
-                    })}
-                </div>
+                            <div className="text-center">
+                                <p className="font-semibold text-sm leading-tight">{emp.name}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{emp.role}</p>
+                            </div>
+                        </button>
+                    );
+                })}
             </div>
+
+            {employees.length === 0 && (
+                <p className="text-center text-muted-foreground py-12">
+                    Nenhum funcionário cadastrado. Vá para Dashboard para adicionar.
+                </p>
+            )}
         </div>
     );
 }
