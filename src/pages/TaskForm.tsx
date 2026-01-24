@@ -112,7 +112,7 @@ export default function TaskForm() {
         setFormData(prev => ({ ...prev, photoPreview: null }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Auto-generate title if empty from description
@@ -120,10 +120,26 @@ export default function TaskForm() {
             ? formData.description.substring(0, 50) + '...'
             : formData.description) || 'Nova Tarefa';
 
-        const finalData = { ...formData, title: finalTitle };
+        const payload = {
+            title: finalTitle,
+            description: formData.description,
+            assigned_to: formData.assignedTo,
+            type: formData.type,
+            due_date: formData.dueDate,
+            recurrence_type: formData.recurrenceType,
+            recurrence_day: formData.recurrenceDay,
+            status: 'pending'
+            // reference_photo: formData.photoPreview // TODO: Add to schema if needed
+        };
 
-        console.log('Saved Task:', finalData);
-        navigate('/tasks');
+        try {
+            const { error } = await supabase.from('tasks').insert([payload]);
+            if (error) throw error;
+            navigate('/tasks');
+        } catch (error) {
+            console.error('Error saving task:', error);
+            alert('Erro ao salvar tarefa.');
+        }
     };
 
     return (
