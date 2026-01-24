@@ -1,0 +1,60 @@
+-- Enable UUID extension
+create extension if not exists "uuid-ossp";
+
+-- Table: Employees
+create table public.employees (
+  id uuid default gen_random_uuid() primary key,
+  name text not null,
+  role text not null,
+  photo text, -- Base64 (not recommended for prod) or URL
+  phone text,
+  active boolean default true,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Table: Tasks
+create table public.tasks (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  assigned_to uuid references public.employees(id),
+  status text check (status in ('pending', 'in_progress', 'blocked', 'completed')) default 'pending',
+  type text check (type in ('routine', 'one_off')) default 'routine',
+  due_date date,
+  recurrence_type text check (recurrence_type in ('none', 'daily', 'weekly', 'monthly')) default 'none',
+  recurrence_day integer, -- 0-6 (weekly) or 1-31 (monthly)
+  
+  -- Proof of completion
+  proof_photo_url text,
+  proof_audio_url text,
+  proof_comment text,
+  completed_at timestamp with time zone,
+  
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable Row Level Security (RLS)
+alter table public.employees enable row level security;
+alter table public.tasks enable row level security;
+
+-- Create Policy: Allow all access for now (since we use client-side logic for roles)
+create policy "Enable all access for all users" on public.employees for all using (true) with check (true);
+create policy "Enable all access for all users" on public.tasks for all using (true) with check (true);
+
+-- Enable Realtime
+alter publication supabase_realtime add table public.employees;
+alter publication supabase_realtime add table public.tasks;
+
+-- Storage Setup (buckets for photos and audio)
+insert into storage.buckets (id, name, public) 
+values 
+  ('employees', 'employees', true),
+  ('proofs', 'proofs', true)
+on conflict (id) do nothing;
+
+-- Storage Policies (Public Access)
+create policy "Public Access Employees" on storage.objects for select using ( bucket_id = 'employees' );
+create policy "Public Insert Employees" on storage.objects for insert with check ( bucket_id = 'employees' );
+
+create policy "Public Access Proofs" on storage.objects for select using ( bucket_id = 'proofs' );
+create policy "Public Insert Proofs" on storage.objects for insert with check ( bucket_id = 'proofs' );
