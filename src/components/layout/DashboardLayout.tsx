@@ -1,12 +1,11 @@
-import React from 'react';
+
 import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, CheckSquare, LogOut } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Sidebar = () => {
     const navItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-        { icon: Users, label: 'Funcionários', path: '/employees' },
         { icon: CheckSquare, label: 'Tarefas', path: '/tasks' },
     ];
 

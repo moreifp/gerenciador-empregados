@@ -2,7 +2,8 @@ export interface Employee {
     id: string;
     name: string;
     role: string;
-    photoUrl?: string; // Optional for now
+    photo?: string; // Base64 or URL
+    photoUrl?: string; // Legacy
     address: string;
     phone: string;
     admissionDate: string;
@@ -29,7 +30,8 @@ export interface Task {
     type: TaskType;
     dueDate: string; // ISO Date String
     status: TaskStatus;
-    recurrence?: 'daily' | 'weekly' | 'monthly';
+    recurrenceType: 'none' | 'daily' | 'weekly' | 'monthly';
+    recurrenceDay?: number; // 0-6 for weekly, 1-31 for monthly
     proof?: {
         photoUrl?: string;
         audioUrl?: string;
