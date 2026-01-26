@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera, Check } from 'lucide-react';
+import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -419,62 +419,59 @@ export default function TaskForm() {
                             {selectionMode !== 'all' && (
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">
-                                        {selectionMode === 'single' ? 'Selecione um funcionário' : `Funcionários Selecionados (${selectedEmployees.size})`}
+                                        {selectionMode === 'single' ? 'Selecione um funcionário' : `Funcionários (${selectedEmployees.size} selecionados)`}
                                     </label>
-                                    <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
-                                        {employees.map((employee) => {
-                                            const isSelected = selectedEmployees.has(employee.id);
-                                            return (
-                                                <button
-                                                    key={employee.id}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (selectionMode === 'single') {
-                                                            setSelectedEmployees(new Set([employee.id]));
-                                                            setFormData(prev => ({ ...prev, assignedTo: employee.id }));
-                                                        } else {
-                                                            // Prevent removing pre-assigned employee
-                                                            if (isSelected && employee.id === preAssignedEmployeeId) {
-                                                                return; // Cannot deselect pre-assigned employee
-                                                            }
 
-                                                            const newSet = new Set(selectedEmployees);
-                                                            if (isSelected) {
-                                                                newSet.delete(employee.id);
-                                                            } else {
-                                                                newSet.add(employee.id);
-                                                            }
-                                                            setSelectedEmployees(newSet);
-                                                        }
-                                                    }}
-                                                    className={`flex items-center gap-3 p-2 rounded-lg border-2 transition-all text-left ${isSelected
-                                                        ? 'border-primary bg-primary/5'
-                                                        : 'border-border hover:border-primary/50'
-                                                        } ${employee.id === preAssignedEmployeeId && selectionMode === 'multiple'
-                                                            ? 'opacity-75 cursor-not-allowed'
-                                                            : ''
-                                                        }`}
+                                    {selectionMode === 'single' ? (
+                                        <select
+                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            value={formData.assignedTo}
+                                            onChange={(e) => {
+                                                setFormData(prev => ({ ...prev, assignedTo: e.target.value }));
+                                                setSelectedEmployees(new Set([e.target.value]));
+                                            }}
+                                            required
+                                        >
+                                            <option value="">Selecione...</option>
+                                            {employees.map(emp => (
+                                                <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <select
+                                            multiple
+                                            className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                            value={Array.from(selectedEmployees)}
+                                            onChange={(e) => {
+                                                const options = Array.from(e.target.selectedOptions);
+                                                const values = options.map(opt => opt.value);
+
+                                                // Ensure pre-assigned employee is always included
+                                                if (preAssignedEmployeeId && !values.includes(preAssignedEmployeeId)) {
+                                                    values.push(preAssignedEmployeeId);
+                                                }
+
+                                                setSelectedEmployees(new Set(values));
+                                            }}
+                                        >
+                                            {employees.map(emp => (
+                                                <option
+                                                    key={emp.id}
+                                                    value={emp.id}
+                                                    disabled={emp.id === preAssignedEmployeeId}
+                                                    className={emp.id === preAssignedEmployeeId ? 'font-bold' : ''}
                                                 >
-                                                    <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center shrink-0">
-                                                        {employee.photo ? (
-                                                            <img src={employee.photo} alt={employee.name} className="h-full w-full object-cover" />
-                                                        ) : (
-                                                            <span className="text-xs font-bold text-primary/60">{employee.name[0]}</span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-medium text-sm truncate">{employee.name}</p>
-                                                        <p className="text-xs text-muted-foreground truncate">{employee.role}</p>
-                                                    </div>
-                                                    {isSelected && (
-                                                        <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-                                                            <Check className="h-3 w-3 text-white" />
-                                                        </div>
-                                                    )}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
+                                                    {emp.name}{emp.id === preAssignedEmployeeId ? ' 🔒' : ''}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
+
+                                    {selectionMode === 'multiple' && (
+                                        <p className="text-xs text-muted-foreground mt-2">
+                                            💡 Dica: Segure Ctrl (Windows) ou Cmd (Mac) para selecionar múltiplos
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
