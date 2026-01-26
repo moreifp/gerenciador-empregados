@@ -12,6 +12,7 @@ export default function Tasks() {
     const { user, role } = useAuth();
     const [baseTasks, setBaseTasks] = useState<Task[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
+
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
     const [filter, setFilter] = useState('');
@@ -26,34 +27,59 @@ export default function Tasks() {
             const { data: empData } = await supabase.from('employees').select('*').eq('active', true);
             if (empData) setEmployees(empData as any);
 
-            // Fetch Tasks
-            const { data: taskData } = await supabase.from('tasks').select('*');
+            // Fetch Tasks with Assignees
+            const { data: taskData } = await supabase
+                .from('tasks')
+                .select('*, task_assignees(employee_id)');
+
             if (taskData) {
-                const mappedTasks: Task[] = taskData.map((t: any) => ({
-                    id: t.id,
-                    title: t.title,
-                    description: t.description,
-                    assignedTo: t.assigned_to,
-                    isShared: t.is_shared,
-                    status: t.status,
-                    type: t.type,
-                    dueDate: t.due_date,
-                    recurrenceType: t.recurrence_type,
-                    recurrenceDay: t.recurrence_day,
-                    proof: {
-                        photoUrl: t.proof_photo_url,
-                        audioUrl: t.proof_audio_url,
-                        comment: t.proof_comment,
-                        completedAt: t.completed_at
-                    },
-                    response: t.response,
-                    createdAt: t.created_at
-                }));
+                let mappedTasks: Task[] = taskData.map((t: any) => {
+                    // Check if current user is in assignees list
+                    const assigneeIds = t.task_assignees?.map((a: any) => a.employee_id) || [];
+
+                    return {
+                        id: t.id,
+                        title: t.title,
+                        description: t.description,
+                        assignedTo: t.assigned_to,
+                        assigneeIds: assigneeIds, // Add this to Task type if needed, or just use for filtering locally
+                        isShared: t.is_shared,
+                        status: t.status,
+                        type: t.type,
+                        dueDate: t.due_date,
+                        recurrenceType: t.recurrence_type,
+                        recurrenceDay: t.recurrence_day,
+                        proof: {
+                            photoUrl: t.proof_photo_url,
+                            audioUrl: t.proof_audio_url,
+                            comment: t.proof_comment,
+                            completedAt: t.completed_at
+                        },
+                        response: t.response,
+                        createdAt: t.created_at
+                    };
+                });
+
+                // Filter for Employee Role
+                if (role === 'employee' && user) {
+                    mappedTasks = mappedTasks.filter(t =>
+                        t.isShared ||
+                        t.assignedTo === user.id ||
+                        (t as any).assigneeIds.includes(user.id)
+                    );
+                }
+
                 setBaseTasks(mappedTasks);
             }
         };
         fetchData();
-    }, []);
+    }, [user, role]); // Depend on user/role to re-fetch/filter
+
+    // If employee login, force selectedEmployeeId (visual filter) to be themselves initially? 
+    // Actually, "My Tasks" view implies we show tasks assigned TO THEM. 
+    // The visual filter `selectedEmployeeId` is for admins to filter BY employee.
+    // We should probably hide the employee filter dropdown for regular employees.
+
 
     const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
         const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
