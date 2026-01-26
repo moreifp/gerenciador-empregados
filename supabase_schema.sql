@@ -73,20 +73,34 @@ begin
 end $$;
 
 -- Realtime
-begin;
-  -- Remove tables from publication first to avoid dupes (safe operation)
-  alter publication supabase_realtime drop table public.employees;
-  alter publication supabase_realtime drop table public.tasks;
-  alter publication supabase_realtime drop table public.task_assignees;
+do $$
+begin
+  -- Try to remove tables first to ensure clean state (ignoring errors if they aren't in publication)
+  begin
+    alter publication supabase_realtime drop table public.employees;
+  exception when others then null; end;
   
-  -- Re-add tables
-  alter publication supabase_realtime add table public.employees;
-  alter publication supabase_realtime add table public.tasks;
-  alter publication supabase_realtime add table public.task_assignees;
-exception when others then
-  -- Ignore errors (e.g. if publication doesn't exist)
-  null;
-end;
+  begin
+    alter publication supabase_realtime drop table public.tasks;
+  exception when others then null; end;
+
+  begin
+    alter publication supabase_realtime drop table public.task_assignees;
+  exception when others then null; end;
+
+  -- Add tables to publication
+  begin
+    alter publication supabase_realtime add table public.employees;
+  exception when others then null; end;
+
+  begin
+    alter publication supabase_realtime add table public.tasks;
+  exception when others then null; end;
+
+  begin
+    alter publication supabase_realtime add table public.task_assignees;
+  exception when others then null; end;
+end $$;
 
 -- Storage Setup
 insert into storage.buckets (id, name, public) 
