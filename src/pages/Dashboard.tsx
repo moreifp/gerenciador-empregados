@@ -145,7 +145,7 @@ export default function Dashboard() {
                     >
                         {/* Edit and Delete Buttons - Only for Admin */}
                         {canManageEmployees && (
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-2">
+                            <div className="hidden md:flex absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 gap-2">
                                 <Button
                                     variant="secondary"
                                     size="icon"
@@ -170,7 +170,7 @@ export default function Dashboard() {
 
                         <CardContent className="flex flex-col items-center justify-center flex-1 p-6 text-center">
                             <div
-                                className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center mb-4 ring-4 ring-background shadow-md cursor-pointer hover:scale-105 hover:ring-primary transition-all duration-300"
+                                className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center mb-4 ring-4 ring-background shadow-md cursor-pointer md:hover:scale-105 md:hover:ring-primary transition-all duration-300"
                                 onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
                                 title="Ver tarefas deste funcionário"
                             >
