@@ -17,6 +17,7 @@ export interface Employee {
         cpf: string;
         rg: string;
     };
+    custom_password?: string;
 }
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'blocked';

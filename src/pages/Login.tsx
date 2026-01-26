@@ -53,12 +53,24 @@ export default function Login() {
     const handleEmployeeLoginSubmit = () => {
         if (!selectedEmployee) return;
 
-        // Validation logic: last 4 digits of phone
+        // Validation logic
+        // 1. Check custom password
+        if (selectedEmployee.custom_password) {
+            if (employeePass === selectedEmployee.custom_password) {
+                loginEmployee(selectedEmployee.id, selectedEmployee.name, selectedEmployee.photo);
+                navigate('/tasks');
+                return;
+            } else {
+                setError('Senha incorreta.');
+                return;
+            }
+        }
+
+        // 2. Fallback: Check last 4 digits of phone
         const cleanPhone = selectedEmployee.phone?.replace(/\D/g, '') || '';
         const last4 = cleanPhone.slice(-4);
 
         if (!selectedEmployee.phone || cleanPhone.length < 4) {
-            // Fallback for employees without valid phone: ask admin to set it up
             setError('Este funcionário não tem telefone cadastrado. Contate o suporte.');
             return;
         }
@@ -67,7 +79,7 @@ export default function Login() {
             loginEmployee(selectedEmployee.id, selectedEmployee.name, selectedEmployee.photo);
             navigate('/tasks');
         } else {
-            setError('Senha incorreta. Use os últimos 4 dígitos do seu telefone.');
+            setError('Senha incorreta. Tente os últimos 4 dígitos do telefone.');
         }
     };
 
@@ -128,18 +140,18 @@ export default function Login() {
                                             <Input
                                                 type="password"
                                                 className="pl-9"
-                                                placeholder="Últimos 4 dígitos do telefone"
+                                                placeholder="Sua senha"
                                                 value={employeePass}
                                                 onChange={(e) => {
                                                     setEmployeePass(e.target.value);
                                                     setError('');
                                                 }}
-                                                maxLength={4}
+                                                maxLength={6}
                                             />
                                         </div>
                                         {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
                                         <p className="text-xs text-muted-foreground">
-                                            Senha inicial: Últimos 4 dígitos do seu celular cadastrado.
+                                            Senha padrão: Últimos 4 dígitos do seu celular.
                                         </p>
                                     </div>
 

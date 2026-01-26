@@ -9,6 +9,7 @@ create table if not exists public.employees (
   photo text, -- Base64 or URL
   phone text,
   active boolean default true,
+  custom_password text, -- 4-6 digit password
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -43,6 +44,11 @@ begin
   -- Add is_shared column if it doesn't exist (fix for schema cache error)
   if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'is_shared') then
     alter table public.tasks add column is_shared boolean default false;
+  end if;
+
+  -- Add custom_password column to employees
+  if not exists (select 1 from information_schema.columns where table_name = 'employees' and column_name = 'custom_password') then
+    alter table public.employees add column custom_password text;
   end if;
 
   -- Add recurrence_days column for custom multi-day selection

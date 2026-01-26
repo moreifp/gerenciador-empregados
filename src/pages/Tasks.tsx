@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Filter, User, ArrowLeft } from 'lucide-react';
+import { Plus, Filter, User, ArrowLeft, Lock, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskCard } from '@/components/tasks/TaskCard';
@@ -19,6 +19,12 @@ export default function Tasks() {
 
     const [filter, setFilter] = useState('');
     const [showCompleted, setShowCompleted] = useState(false);
+
+    // Change Password State
+    const [isChangingPassword, setIsChangingPassword] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const employeeId = searchParams.get('employeeId');
@@ -102,6 +108,38 @@ export default function Tasks() {
 
     const handleEdit = (taskId: string) => {
         navigate(`/tasks/${taskId}`);
+    };
+
+    const handleChangePassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!user) return;
+
+        if (newPassword.length < 4 || newPassword.length > 6) {
+            alert('A senha deve ter entre 4 e 6 dígitos.');
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            alert('As senhas não coincidem.');
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('employees')
+                .update({ custom_password: newPassword })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            alert('Senha alterada com sucesso!');
+            setIsChangingPassword(false);
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error) {
+            console.error('Error changing password:', error);
+            alert('Erro ao alterar senha.');
+        }
     };
 
     const isEmployeeView = role === 'employee';
@@ -252,11 +290,58 @@ export default function Tasks() {
                         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
                             Olá, {user?.name}
                         </h2>
-                        <p className="text-sm sm:text-base text-muted-foreground mt-1">
-                            Aqui estão suas tarefas.
-                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                            <p className="text-sm sm:text-base text-muted-foreground">
+                                Aqui estão suas tarefas.
+                            </p>
+                            <Button
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs text-primary ml-2"
+                                onClick={() => setIsChangingPassword(!isChangingPassword)}
+                            >
+                                <Lock className="h-3 w-3 mr-1" />
+                                {isChangingPassword ? 'Cancelar' : 'Trocar Senha'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
+
+                {isChangingPassword && (
+                    <div className="bg-slate-50 border rounded-lg p-4 animate-in slide-in-from-top-2">
+                        <form onSubmit={handleChangePassword} className="space-y-3">
+                            <div className="flex justify-between items-center">
+                                <h3 className="font-semibold text-sm">Nova Senha (4-6 dígitos)</h3>
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setIsChangingPassword(false)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="flex gap-3 items-end">
+                                <div className="space-y-1 flex-1">
+                                    <Input
+                                        type="password"
+                                        placeholder="Nova senha"
+                                        maxLength={6}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value.replace(/\D/g, ''))}
+                                        required
+                                    />
+                                </div>
+                                <div className="space-y-1 flex-1">
+                                    <Input
+                                        type="password"
+                                        placeholder="Confirmar"
+                                        maxLength={6}
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value.replace(/\D/g, ''))}
+                                        required
+                                    />
+                                </div>
+                                <Button type="submit">Salvar</Button>
+                            </div>
+                        </form>
+                    </div>
+                )}
 
                 <div className="flex items-center space-x-2">
                     <div className="relative flex-1">
