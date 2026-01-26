@@ -106,7 +106,6 @@ export default function Login() {
                                         </div>
                                         <div>
                                             <p className="font-medium">{selectedEmployee.name}</p>
-                                            <p className="text-xs text-muted-foreground">{selectedEmployee.role}</p>
                                         </div>
                                         <Button
                                             variant="ghost"
@@ -171,7 +170,6 @@ export default function Login() {
                                             </div>
                                             <div className="text-center">
                                                 <p className="font-medium text-sm leading-tight">{emp.name}</p>
-                                                <p className="text-xs text-muted-foreground mt-1">{emp.role}</p>
                                             </div>
                                         </button>
                                     ))}
