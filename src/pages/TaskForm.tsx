@@ -43,6 +43,11 @@ export default function TaskForm() {
         };
         fetchEmployees();
 
+        // Load task if editing
+        if (isEditing && id) {
+            fetchTask();
+        }
+
         // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -79,7 +84,34 @@ export default function TaskForm() {
                 streamRef.current.getTracks().forEach(track => track.stop());
             }
         };
-    }, []);
+    }, [id, isEditing]);
+
+    const fetchTask = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) throw error;
+            if (data) {
+                setFormData({
+                    title: data.title || '',
+                    description: data.description || '',
+                    assignedTo: data.assigned_to || '',
+                    type: data.type || 'routine',
+                    dueDate: data.due_date || new Date().toISOString().split('T')[0],
+                    recurrenceType: data.recurrence_type || 'none',
+                    recurrenceDay: data.recurrence_day || new Date().getDay(),
+                    photoPreview: null // Tasks don't have reference photos in current schema
+                });
+            }
+        } catch (error) {
+            console.error('Error loading task:', error);
+            alert('Erro ao carregar tarefa.');
+        }
+    };
 
     useEffect(() => {
         if (isCameraOpen && streamRef.current && videoRef.current) {
@@ -167,12 +199,23 @@ export default function TaskForm() {
             due_date: formData.dueDate,
             recurrence_type: formData.recurrenceType,
             recurrence_day: formData.recurrenceDay,
-            status: 'pending'
+            ...(isEditing ? {} : { status: 'pending' }) // Only set status on create
             // reference_photo: formData.photoPreview // TODO: Add to schema if needed
         };
 
         try {
-            const { error } = await supabase.from('tasks').insert([payload]);
+            let error;
+            if (isEditing) {
+                const { error: updateError } = await supabase
+                    .from('tasks')
+                    .update(payload)
+                    .eq('id', id);
+                error = updateError;
+            } else {
+                const { error: insertError } = await supabase.from('tasks').insert([payload]);
+                error = insertError;
+            }
+
             if (error) throw error;
             navigate('/tasks');
         } catch (error) {

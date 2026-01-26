@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle2, Circle } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Pencil } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 interface TaskCardProps {
     task: Task;
     onStatusChange?: (id: string, newStatus: TaskStatus) => void;
+    onEdit?: (taskId: string) => void;
 }
 
-export function TaskCard({ task, onStatusChange }: TaskCardProps) {
+export function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps) {
     const isCompleted = task.status === 'completed';
 
     const handleToggle = () => {
@@ -19,7 +20,21 @@ export function TaskCard({ task, onStatusChange }: TaskCardProps) {
     };
 
     return (
-        <Card className={cn("transition-all border-l-4", isCompleted ? "border-green-500 bg-green-50/50" : "border-gray-300")}>
+        <Card className={cn("transition-all border-l-4 relative group", isCompleted ? "border-green-500 bg-green-50/50" : "border-gray-300")}>
+            {/* Edit Button - Only show if onEdit is provided */}
+            {onEdit && (
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    <Button
+                        variant="secondary"
+                        size="icon"
+                        className="h-8 w-8 rounded-full shadow-sm"
+                        onClick={() => onEdit(task.id)}
+                    >
+                        <Pencil className="h-4 w-4" />
+                    </Button>
+                </div>
+            )}
+
             <CardContent className="p-4 flex gap-4">
                 {/* Check Action - Make it big and easy to hit */}
                 <Button

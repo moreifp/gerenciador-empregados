@@ -62,8 +62,13 @@ export default function Tasks() {
         setBaseTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     };
 
+    const handleEdit = (taskId: string) => {
+        navigate(`/tasks/${taskId}`);
+    };
+
     const isEmployeeView = role === 'employee';
     const canCreateTask = role === 'admin'; // Only admin can create tasks
+    const canEditTask = role === 'admin'; // Only admin can edit tasks
 
     // Get task count per employee
     const getEmployeeTaskCount = (empId: string) => {
@@ -167,7 +172,12 @@ export default function Tasks() {
                         <p className="text-center text-muted-foreground py-8">Nenhuma tarefa encontrada</p>
                     ) : (
                         tasks.map(task => (
-                            <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+                            <TaskCard
+                                key={task.id}
+                                task={task}
+                                onStatusChange={handleStatusChange}
+                                onEdit={canEditTask ? handleEdit : undefined}
+                            />
                         ))
                     )}
                 </div>
@@ -234,7 +244,12 @@ export default function Tasks() {
 
                 <div className="flex-1 overflow-auto pb-6 space-y-3">
                     {tasks.map(task => (
-                        <TaskCard key={task.id} task={task} onStatusChange={handleStatusChange} />
+                        <TaskCard
+                            key={task.id}
+                            task={task}
+                            onStatusChange={handleStatusChange}
+                            onEdit={canEditTask ? handleEdit : undefined}
+                        />
                     ))}
                     {tasks.length === 0 && (
                         <p className="text-center text-muted-foreground py-8">Nenhuma tarefa</p>
