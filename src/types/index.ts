@@ -26,7 +26,8 @@ export interface Task {
     id: string;
     title: string;
     description: string;
-    assignedTo: string; // Employee ID
+    assignedTo?: string; // Employee ID - optional for shared tasks
+    isShared?: boolean; // True if task is for all employees
     type: TaskType;
     dueDate: string; // ISO Date String
     status: TaskStatus;

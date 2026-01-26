@@ -17,7 +17,8 @@ create table public.tasks (
   id uuid default gen_random_uuid() primary key,
   title text not null,
   description text,
-  assigned_to uuid references public.employees(id),
+  assigned_to uuid references public.employees(id), -- NULL for shared tasks
+  is_shared boolean default false, -- True if task is for all employees
   status text check (status in ('pending', 'in_progress', 'blocked', 'completed')) default 'pending',
   type text check (type in ('routine', 'one_off')) default 'routine',
   due_date date,

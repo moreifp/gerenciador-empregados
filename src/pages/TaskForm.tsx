@@ -191,10 +191,13 @@ export default function TaskForm() {
             ? formData.description.substring(0, 50) + '...'
             : formData.description) || 'Nova Tarefa';
 
+        const isSharedTask = formData.assignedTo === 'ALL';
+
         const payload = {
             title: finalTitle,
             description: formData.description,
-            assigned_to: formData.assignedTo,
+            assigned_to: isSharedTask ? null : formData.assignedTo,
+            is_shared: isSharedTask,
             type: formData.type,
             due_date: formData.dueDate,
             recurrence_type: formData.recurrenceType,
@@ -350,10 +353,16 @@ export default function TaskForm() {
                                 required
                             >
                                 <option value="">Selecione um funcionário</option>
+                                <option value="ALL">👥 Todos os Funcionários</option>
                                 {employees.map(emp => (
                                     <option key={emp.id} value={emp.id}>{emp.name}</option>
                                 ))}
                             </select>
+                            {formData.assignedTo === 'ALL' && (
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    ℹ️ Esta tarefa aparecerá para todos os funcionários. Quando qualquer um concluir, será marcada como concluída para todos.
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
 

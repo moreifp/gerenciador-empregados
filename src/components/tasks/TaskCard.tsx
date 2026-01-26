@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle2, Circle, Pencil } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Pencil, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -58,6 +58,12 @@ export function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps) {
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                            {task.isShared && (
+                                <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                    <Users className="h-3 w-3" />
+                                    Todos
+                                </span>
+                            )}
                         </div>
                     </div>
 

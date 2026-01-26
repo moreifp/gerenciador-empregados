@@ -34,6 +34,7 @@ export default function Tasks() {
                     title: t.title,
                     description: t.description,
                     assignedTo: t.assigned_to,
+                    isShared: t.is_shared,
                     status: t.status,
                     type: t.type,
                     dueDate: t.due_date,
@@ -72,13 +73,14 @@ export default function Tasks() {
 
     // Get task count per employee
     const getEmployeeTaskCount = (empId: string) => {
-        return baseTasks.filter(t => t.assignedTo === empId && t.status !== 'completed').length;
+        return baseTasks.filter(t => (t.assignedTo === empId || t.isShared) && t.status !== 'completed').length;
     };
 
     // If an employee is selected (mobile view), show their tasks
     if (selectedEmployeeId) {
         const selectedEmployee = employees.find(e => e.id === selectedEmployeeId);
-        let tasks = baseTasks.filter(t => t.assignedTo === selectedEmployeeId);
+        // Include tasks assigned to this employee OR shared tasks
+        let tasks = baseTasks.filter(t => t.assignedTo === selectedEmployeeId || t.isShared);
 
         // For kiosk, filter tasks to show only today + next 7 days
         if (role === 'kiosk') {
@@ -187,7 +189,7 @@ export default function Tasks() {
 
     // For employee view, auto-select their tasks
     if (isEmployeeView && user) {
-        let tasks = baseTasks.filter(t => t.assignedTo === user.id);
+        let tasks = baseTasks.filter(t => t.assignedTo === user.id || t.isShared);
 
         // Apply text filter
         if (filter) {
