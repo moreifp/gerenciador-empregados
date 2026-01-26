@@ -73,6 +73,13 @@ export function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps) {
                         </p>
                     )}
 
+                    {task.response && (
+                        <div className="mt-2 p-2 bg-secondary/30 rounded-md text-sm border-l-2 border-secondary">
+                            <span className="font-medium text-xs block text-muted-foreground mb-0.5">Resposta:</span>
+                            <p className="text-foreground">{task.response}</p>
+                        </div>
+                    )}
+
                     {task.proof?.photoUrl && (
                         <div className="rounded-md overflow-hidden h-20 w-32 bg-slate-100 border">
                             <img src={task.proof.photoUrl} alt="Prova" className="w-full h-full object-cover" />
