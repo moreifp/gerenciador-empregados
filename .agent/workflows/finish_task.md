@@ -16,3 +16,9 @@ description: Workflow to build and commit changes after completing a task
    git add .
    git commit -m "feat: completed task <description>"
    ```
+
+3. **Push Changes**
+   Push the committed changes to the remote repository.
+   ```bash
+   git push
+   ```
