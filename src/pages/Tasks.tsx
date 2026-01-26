@@ -150,7 +150,7 @@ export default function Tasks() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setSelectedEmployeeId(null)}
+                        onClick={() => navigate('/')}
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
