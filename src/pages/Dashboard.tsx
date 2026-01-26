@@ -120,7 +120,7 @@ export default function Dashboard() {
                 </div>
             </div>
 
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {/* Add New Employee Card - Only for Admin */}
                 {canManageEmployees && (
                     <Card
