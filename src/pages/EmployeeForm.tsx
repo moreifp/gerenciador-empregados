@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Image as ImageIcon, X, Camera } from 'lucide-react';
+import { ArrowLeft, Save, Image as ImageIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,11 +10,6 @@ export default function EmployeeForm() {
     const navigate = useNavigate();
     const { id } = useParams();
     const isEditing = !!id && id !== 'new';
-
-    // Camera State
-    const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const streamRef = useRef<MediaStream | null>(null);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -53,43 +48,7 @@ export default function EmployeeForm() {
         }
     };
 
-    useEffect(() => {
-        if (isCameraOpen && streamRef.current && videoRef.current) {
-            videoRef.current.srcObject = streamRef.current;
-        }
-    }, [isCameraOpen]);
 
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            streamRef.current = stream;
-            setIsCameraOpen(true);
-        } catch (err) {
-            console.error("Error accessing camera:", err);
-            alert("Não foi possível acessar a câmera.");
-        }
-    };
-
-    const stopCamera = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-        setIsCameraOpen(false);
-    };
-
-    const capturePhoto = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(videoRef.current, 0, 0);
-            const dataUrl = canvas.toDataURL('image/jpeg');
-            setFormData(prev => ({ ...prev, photoPreview: dataUrl }));
-            stopCamera();
-        }
-    };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -187,46 +146,13 @@ export default function EmployeeForm() {
                                 </div>
                             </div>
 
-                            {/* Photo Upload & Camera */}
+                            {/* Photo Upload */}
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Foto do Funcionário</label>
 
-                                {!formData.photoPreview && !isCameraOpen ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* Upload Box */}
-                                        <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
-                                            <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                                            <p className="text-xs font-medium">Enviar Foto</p>
-                                            <Input
-                                                type="file"
-                                                accept="image/*"
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                onChange={handlePhotoChange}
-                                            />
-                                        </div>
-
-                                        {/* Camera Box */}
-                                        <div
-                                            className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
-                                            onClick={startCamera}
-                                        >
-                                            <Camera className="h-8 w-8 mb-2 opacity-50" />
-                                            <p className="text-xs font-medium">Tirar Foto Agora</p>
-                                        </div>
-                                    </div>
-                                ) : isCameraOpen ? (
-                                    <div className="relative rounded-lg overflow-hidden border bg-black">
-                                        <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover"></video>
-                                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                                            <Button variant="secondary" onClick={stopCamera} type="button">Cancelar</Button>
-                                            <Button onClick={capturePhoto} type="button" className="bg-white text-black hover:bg-gray-200">
-                                                <Camera className="mr-2 h-4 w-4" /> Capturar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
+                                {formData.photoPreview ? (
                                     <div className="relative rounded-lg overflow-hidden border w-full max-w-xs mx-auto">
-                                        <img src={formData.photoPreview!} alt="Preview" className="w-full h-64 object-cover" />
+                                        <img src={formData.photoPreview} alt="Preview" className="w-full h-64 object-cover" />
                                         <Button
                                             type="button"
                                             variant="destructive"
@@ -236,6 +162,20 @@ export default function EmployeeForm() {
                                         >
                                             <X className="h-4 w-4" />
                                         </Button>
+                                    </div>
+                                ) : (
+                                    <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-48 bg-muted/10">
+                                        <ImageIcon className="h-10 w-10 mb-3 opacity-50" />
+                                        <p className="font-medium">Adicionar Foto</p>
+                                        <p className="text-xs text-muted-foreground mt-1 text-center">
+                                            Clique para escolher um arquivo ou tirar uma foto
+                                        </p>
+                                        <Input
+                                            type="file"
+                                            accept="image/*"
+                                            className="absolute inset-0 opacity-0 cursor-pointer h-full w-full"
+                                            onChange={handlePhotoChange}
+                                        />
                                     </div>
                                 )}
                             </div>
