@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 
 
 type UserRole = 'admin' | 'employee' | 'kiosk' | null;
@@ -23,18 +23,12 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    // const navigate = useNavigate(); // Can't use navigate here if AuthProvider is outside Router
-
-    useEffect(() => {
-        // Load from localStorage on mount
+    const [user, setUser] = useState<User | null>(() => {
         const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setIsLoading(false);
-    }, []);
+        return storedUser ? JSON.parse(storedUser) : null;
+    });
+    const [isLoading] = useState(false);
+    // const navigate = useNavigate(); // Can't use navigate here if AuthProvider is outside Router
 
     const loginAdmin = (password: string) => {
         if (password === '2408') { // Simple hardcoded check

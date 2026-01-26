@@ -7,10 +7,12 @@ import TaskForm from '@/pages/TaskForm';
 import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 
+import { Loading } from '@/components/ui/loading';
+
 // Simple protection wrapper
 function ProtectedLayout() {
     const { user, isLoading } = useAuth();
-    if (isLoading) return <div>Carregando...</div>;
+    if (isLoading) return <Loading fullScreen />;
     if (!user) return <Navigate to="/login" replace />;
     return <DashboardLayout />;
 }
