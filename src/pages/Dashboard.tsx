@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Loading } from '@/components/ui/loading';
 
 export default function Dashboard() {
     const [employees, setEmployees] = useState<Employee[]>([]);
@@ -99,7 +100,7 @@ export default function Dashboard() {
                 </div>
 
                 {loading ? (
-                    <div className="text-center py-20 text-muted-foreground text-xl">Carregando...</div>
+                    <Loading text="Carregando equipe..." className="py-20" />
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8">
                         {employees.map((employee) => (
@@ -166,7 +167,9 @@ export default function Dashboard() {
 
                 {/* Employee List */}
                 {loading ? (
-                    <div className="md:col-span-3 text-center py-10 text-muted-foreground">Carregando...</div>
+                    <div className="md:col-span-3">
+                        <Loading text="Carregando equipe..." className="py-10" />
+                    </div>
                 ) : employees.map((employee) => (
                     <Card
                         key={employee.id}

@@ -7,11 +7,13 @@ import { TaskCard } from '@/components/tasks/TaskCard';
 import { Task, Employee } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { Loading } from '@/components/ui/loading';
 
 export default function Tasks() {
     const { user, role } = useAuth();
     const [baseTasks, setBaseTasks] = useState<Task[]>([]);
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [loading, setLoading] = useState(true);
 
     const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
@@ -78,6 +80,7 @@ export default function Tasks() {
 
                 setBaseTasks(mappedTasks);
             }
+            setLoading(false);
         };
         fetchData();
     }, [user, role]); // Depend on user/role to re-fetch/filter
@@ -109,6 +112,10 @@ export default function Tasks() {
     const getEmployeeTaskCount = (empId: string) => {
         return baseTasks.filter(t => (t.assignedTo === empId || t.isShared) && t.status !== 'completed').length;
     };
+
+    if (loading) {
+        return <Loading text="Carregando tarefas..." fullScreen />;
+    }
 
     // If an employee is selected (mobile view), show their tasks
     if (selectedEmployeeId) {

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TaskType } from '@/types';
 import { supabase } from '@/lib/supabase';
+import { Loading } from '@/components/ui/loading';
 
 export default function TaskForm() {
     const navigate = useNavigate();
@@ -43,18 +44,17 @@ export default function TaskForm() {
     const [employees, setEmployees] = useState<{ id: string, name: string, photo?: string, role?: string }[]>([]);
     const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set(preAssignedEmployeeId ? [preAssignedEmployeeId] : []));
     const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('single');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchEmployees = async () => {
-            const { data } = await supabase.from('employees').select('id, name, photo, role').eq('active', true).order('name');
-            if (data) setEmployees(data);
+        const init = async () => {
+            await fetchEmployees();
+            if (isEditing && id) {
+                await fetchTask();
+            }
+            setLoading(false);
         };
-        fetchEmployees();
-
-        // Load task if editing
-        if (isEditing && id) {
-            fetchTask();
-        }
+        init();
 
         // Initialize Speech Recognition
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -72,6 +72,11 @@ export default function TaskForm() {
             }
         };
     }, [id, isEditing]);
+
+    const fetchEmployees = async () => {
+        const { data } = await supabase.from('employees').select('id, name, photo, role').eq('active', true).order('name');
+        if (data) setEmployees(data);
+    };
 
     const fetchTask = async () => {
         try {
@@ -300,6 +305,10 @@ export default function TaskForm() {
             alert('Erro ao salvar tarefa.');
         }
     };
+
+    if (loading) {
+        return <Loading text="Carregando formulário..." fullScreen />;
+    }
 
     return (
         <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto pb-10 px-4 sm:px-0">

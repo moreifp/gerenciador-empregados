@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
+import { Loading } from '@/components/ui/loading';
 
 export default function EmployeeForm() {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function EmployeeForm() {
         phone: '',
         photoPreview: '' as string | null
     });
-    // const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(isEditing);
 
     useEffect(() => {
         if (isEditing) {
@@ -45,6 +46,8 @@ export default function EmployeeForm() {
         } catch (error) {
             console.error('Error loading employee:', error);
             alert('Erro ao carregar funcionário.');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -106,6 +109,10 @@ export default function EmployeeForm() {
             // setLoading(false);
         }
     };
+
+    if (loading) {
+        return <Loading text="Carregando dados..." fullScreen />;
+    }
 
     return (
         <div className="space-y-4 sm:space-y-6 max-w-3xl mx-auto px-4 sm:px-0">
