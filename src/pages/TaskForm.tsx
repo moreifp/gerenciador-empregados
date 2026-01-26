@@ -19,6 +19,7 @@ export default function TaskForm() {
 
     // Recognition State
     const [isRecording, setIsRecording] = useState(false);
+    const [isRecordingResponse, setIsRecordingResponse] = useState(false);
     const recognitionRef = useRef<any>(null);
 
     // Camera State
@@ -61,27 +62,6 @@ export default function TaskForm() {
             recognitionRef.current.continuous = true;
             recognitionRef.current.interimResults = true;
             recognitionRef.current.lang = 'pt-BR';
-
-            recognitionRef.current.onresult = (event: any) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalTranscript += event.results[i][0].transcript;
-                    } else {
-                        interimTranscript += event.results[i][0].transcript;
-                    }
-                }
-
-                if (finalTranscript) {
-                    const cleanText = finalTranscript.trim();
-                    setFormData(prev => ({
-                        ...prev,
-                        description: (prev.description + ' ' + cleanText).trim()
-                    }));
-                }
-            };
         }
 
         // Cleanup on unmount
@@ -126,13 +106,62 @@ export default function TaskForm() {
         }
     }, [isCameraOpen]);
 
+    // Active recording target ref to handle closure issues
+    const activeRecordingTarget = useRef<'description' | 'response' | null>(null);
+
+    // Update the onresult logic to use the ref
+    useEffect(() => {
+        if (!recognitionRef.current) return;
+
+        recognitionRef.current.onresult = (event: any) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            if (finalTranscript) {
+                const cleanText = finalTranscript.trim();
+                setFormData(prev => {
+                    if (activeRecordingTarget.current === 'description') {
+                        return { ...prev, description: (prev.description + ' ' + cleanText).trim() };
+                    } else if (activeRecordingTarget.current === 'response') {
+                        return { ...prev, response: (prev.response + ' ' + cleanText).trim() };
+                    }
+                    return prev;
+                });
+            }
+        };
+    }, []); // Run once to set up listener with ref access
+
     const toggleRecording = () => {
         if (isRecording) {
             recognitionRef.current?.stop();
             setIsRecording(false);
+            activeRecordingTarget.current = null;
         } else {
+            // Stop other if running
+            if (isRecordingResponse) toggleRecordingResponse();
+
+            activeRecordingTarget.current = 'description';
             recognitionRef.current?.start();
             setIsRecording(true);
+        }
+    };
+
+    const toggleRecordingResponse = () => {
+        if (isRecordingResponse) {
+            recognitionRef.current?.stop();
+            setIsRecordingResponse(false);
+            activeRecordingTarget.current = null;
+        } else {
+            // Stop other if running
+            if (isRecording) toggleRecording();
+
+            activeRecordingTarget.current = 'response';
+            recognitionRef.current?.start();
+            setIsRecordingResponse(true);
         }
     };
 
@@ -287,315 +316,338 @@ export default function TaskForm() {
 
             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                 {/* Main Content */}
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle>O que precisa ser feito?</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        {/* Description & Audio */}
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <label className="text-sm font-medium">Descrição / Instruções</label>
-                                <Button
-                                    type="button"
-                                    variant={isRecording ? "destructive" : "secondary"}
-                                    size="sm"
-                                    onClick={toggleRecording}
-                                    disabled={!canEditDetails}
-                                    className="flex items-center gap-2 animate-in fade-in"
-                                >
-                                    {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-                                    {isRecording ? 'Parar Gravação' : 'Gravar Áudio'}
-                                </Button>
+                {canEditDetails && (
+                    <Card>
+                        <CardHeader className="pb-2">
+                            <CardTitle>O que precisa ser feito?</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Description & Audio */}
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="text-sm font-medium">Descrição / Instruções</label>
+                                    <Button
+                                        type="button"
+                                        variant={isRecording ? "destructive" : "secondary"}
+                                        size="sm"
+                                        onClick={toggleRecording}
+                                        disabled={!canEditDetails}
+                                        className="flex items-center gap-2 animate-in fade-in"
+                                    >
+                                        {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                                        {isRecording ? 'Parar Gravação' : 'Gravar Áudio'}
+                                    </Button>
+                                </div>
+                                <div className="relative">
+                                    <textarea
+                                        name="description"
+                                        className={`flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isRecording ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                        placeholder={isRecording ? "Ouvindo... vá falando..." : "Descreva os detalhes ou use o microfone para ditar..."}
+                                        value={formData.description}
+                                        onChange={handleChange}
+                                        disabled={!canEditDetails}
+                                    />
+                                    {isRecording && (
+                                        <span className="absolute bottom-2 right-2 flex h-3 w-3">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                            <div className="relative">
-                                <textarea
-                                    name="description"
-                                    className={`flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isRecording ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                                    placeholder={isRecording ? "Ouvindo... vá falando..." : "Descreva os detalhes ou use o microfone para ditar..."}
-                                    value={formData.description}
-                                    onChange={handleChange}
-                                    disabled={!canEditDetails}
-                                />
-                                {isRecording && (
-                                    <span className="absolute bottom-2 right-2 flex h-3 w-3">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                                    </span>
-                                )}
-                            </div>
-                        </div>
 
-                        {/* Photo Upload & Camera */}
-                        <div>
-                            <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
+                            {/* Photo Upload & Camera */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
 
-                            {!formData.photoPreview && !isCameraOpen ? (
-                                canEditDetails ? (
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {/* Upload Box */}
-                                        <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
-                                            <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                                            <p className="text-xs font-medium">Enviar Foto</p>
-                                            <Input
-                                                type="file"
-                                                accept="image/*"
-                                                className="absolute inset-0 opacity-0 cursor-pointer"
-                                                onChange={handlePhotoChange}
-                                            />
+                                {!formData.photoPreview && !isCameraOpen ? (
+                                    canEditDetails ? (
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {/* Upload Box */}
+                                            <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
+                                                <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
+                                                <p className="text-xs font-medium">Enviar Foto</p>
+                                                <Input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                                    onChange={handlePhotoChange}
+                                                />
+                                            </div>
+
+                                            {/* Camera Box */}
+                                            <div
+                                                className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
+                                                onClick={startCamera}
+                                            >
+                                                <Camera className="h-8 w-8 mb-2 opacity-50" />
+                                                <p className="text-xs font-medium">Tirar Foto Agora</p>
+                                            </div>
                                         </div>
-
-                                        {/* Camera Box */}
-                                        <div
-                                            className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
-                                            onClick={startCamera}
-                                        >
-                                            <Camera className="h-8 w-8 mb-2 opacity-50" />
-                                            <p className="text-xs font-medium">Tirar Foto Agora</p>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic">Nenhuma foto de referência fornecida.</p>
+                                    )
+                                ) : isCameraOpen ? (
+                                    <div className="relative rounded-lg overflow-hidden border bg-black">
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover"></video>
+                                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+                                            <Button variant="secondary" onClick={stopCamera} type="button">Cancelar</Button>
+                                            <Button onClick={capturePhoto} type="button" className="bg-white text-black hover:bg-gray-200">
+                                                <Camera className="mr-2 h-4 w-4" /> Capturar
+                                            </Button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-muted-foreground italic">Nenhuma foto de referência fornecida.</p>
-                                )
-                            ) : isCameraOpen ? (
-                                <div className="relative rounded-lg overflow-hidden border bg-black">
-                                    <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover"></video>
-                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                                        <Button variant="secondary" onClick={stopCamera} type="button">Cancelar</Button>
-                                        <Button onClick={capturePhoto} type="button" className="bg-white text-black hover:bg-gray-200">
-                                            <Camera className="mr-2 h-4 w-4" /> Capturar
-                                        </Button>
+                                    <div className="relative rounded-lg overflow-hidden border">
+                                        <img src={formData.photoPreview!} alt="Preview" className="w-full h-64 object-cover" />
+                                        {canEditDetails && (
+                                            <Button
+                                                type="button"
+                                                variant="destructive"
+                                                size="icon"
+                                                className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                                                onClick={removePhoto}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="relative rounded-lg overflow-hidden border">
-                                    <img src={formData.photoPreview!} alt="Preview" className="w-full h-64 object-cover" />
-                                    {canEditDetails && (
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                                            onClick={removePhoto}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Details Side-by-Side */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Responsável</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* Selection Mode Buttons */}
-                            <div>
-                                <label className="text-sm font-medium mb-2 block">Modo de Atribuição</label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    <Button
-                                        type="button"
-                                        variant={selectionMode === 'single' ? 'default' : 'outline'}
-                                        className="text-xs"
-                                        onClick={() => {
-                                            setSelectionMode('single');
-                                            if (selectedEmployees.size > 0) {
-                                                const first = Array.from(selectedEmployees)[0];
-                                                setSelectedEmployees(new Set([first]));
-                                                setFormData(prev => ({ ...prev, assignedTo: first }));
-                                            }
-                                        }}
-                                    >
-                                        Um
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant={selectionMode === 'multiple' ? 'default' : 'outline'}
-                                        className="text-xs"
-                                        onClick={() => setSelectionMode('multiple')}
-                                    >
-                                        Vários
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant={selectionMode === 'all' ? 'default' : 'outline'}
-                                        className="text-xs"
-                                        onClick={() => {
-                                            setSelectionMode('all');
-                                            setSelectedEmployees(new Set());
-                                        }}
-                                    >
-                                        Todos
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Employee Selection */}
-                            {selectionMode !== 'all' && (
+                {canEditDetails && (
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Responsável</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* Selection Mode Buttons */}
                                 <div>
-                                    <label className="text-sm font-medium mb-2 block">
-                                        {selectionMode === 'single' ? 'Selecione um funcionário' : `Funcionários (${selectedEmployees.size} selecionados)`}
-                                    </label>
-
-                                    {selectionMode === 'single' ? (
-                                        <select
-                                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                            value={formData.assignedTo}
-                                            onChange={(e) => {
-                                                setFormData(prev => ({ ...prev, assignedTo: e.target.value }));
-                                                setSelectedEmployees(new Set([e.target.value]));
+                                    <label className="text-sm font-medium mb-2 block">Modo de Atribuição</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <Button
+                                            type="button"
+                                            variant={selectionMode === 'single' ? 'default' : 'outline'}
+                                            className="text-xs"
+                                            onClick={() => {
+                                                setSelectionMode('single');
+                                                if (selectedEmployees.size > 0) {
+                                                    const first = Array.from(selectedEmployees)[0];
+                                                    setSelectedEmployees(new Set([first]));
+                                                    setFormData(prev => ({ ...prev, assignedTo: first }));
+                                                }
                                             }}
-                                            required
                                         >
-                                            {employees.map(emp => (
-                                                <option key={emp.id} value={emp.id}>{emp.name}</option>
-                                            ))}
-                                        </select>
-                                    ) : (
-                                        <div className="border border-input rounded-md p-2 sm:p-3 max-h-64 overflow-y-auto space-y-1">
-                                            {employees.map(emp => {
-                                                const isSelected = selectedEmployees.has(emp.id);
-                                                const isLocked = emp.id === preAssignedEmployeeId;
-
-                                                return (
-                                                    <label
-                                                        key={emp.id}
-                                                        className={`flex items-center gap-3 p-3 rounded min-h-[44px] hover:bg-accent cursor-pointer transition-colors ${isLocked ? 'opacity-75 cursor-not-allowed' : ''
-                                                            }`}
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={isSelected}
-                                                            disabled={isLocked}
-                                                            onChange={(e) => {
-                                                                const newSet = new Set(selectedEmployees);
-                                                                if (e.target.checked) {
-                                                                    newSet.add(emp.id);
-                                                                } else {
-                                                                    newSet.delete(emp.id);
-                                                                }
-                                                                setSelectedEmployees(newSet);
-                                                            }}
-                                                            className="h-5 w-5 rounded border-gray-300 shrink-0"
-                                                        />
-                                                        <span className="text-sm sm:text-base flex-1">
-                                                            {emp.name}
-                                                            {isLocked && <span className="ml-2 text-amber-600">🔒</span>}
-                                                        </span>
-                                                    </label>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            {selectionMode === 'all' && (
-                                <p className="text-xs text-muted-foreground mt-4">
-                                    ℹ️ Esta é uma tarefa comum. Ao ser cumprida por qualquer funcionário, será marcada como concluída para todos.
-                                </p>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Agendamento</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Data de Início</label>
-                                <Input
-                                    type="date"
-                                    name="dueDate"
-                                    value={formData.dueDate}
-                                    onChange={handleChange}
-                                    required
-                                    disabled={!canEditDetails}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Repetição</label>
-                                <select
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
-                                    value={formData.recurrenceType}
-                                    onChange={(e) => setFormData({ ...formData, recurrenceType: e.target.value as any })}
-                                    disabled={!canEditDetails}
-                                >
-                                    <option value="none">Não repete (Apenas uma vez)</option>
-                                    <option value="daily">Diário (Todo dia)</option>
-                                    <option value="weekly">Semanal (Toda semana)</option>
-                                    <option value="monthly">Mensal (Todo mês)</option>
-                                </select>
-                            </div>
-
-                            {formData.recurrenceType === 'weekly' && (
-                                <div className="space-y-2 pt-2 border-t">
-                                    <label className="text-sm font-medium block text-center">Dia da Semana</label>
-                                    <div className="flex gap-1 justify-center">
-                                        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
-                                            <button
-                                                key={index}
-                                                type="button"
-                                                disabled={!canEditDetails}
-                                                onClick={() => canEditDetails && setFormData({ ...formData, recurrenceDay: index })}
-                                                className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border transition-colors ${formData.recurrenceDay === index
-                                                    ? 'bg-primary text-primary-foreground border-primary'
-                                                    : 'bg-transparent hover:bg-secondary'
-                                                    }`}
-                                            >
-                                                {day}
-                                            </button>
-                                        ))}
+                                            Um
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={selectionMode === 'multiple' ? 'default' : 'outline'}
+                                            className="text-xs"
+                                            onClick={() => setSelectionMode('multiple')}
+                                        >
+                                            Vários
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant={selectionMode === 'all' ? 'default' : 'outline'}
+                                            className="text-xs"
+                                            onClick={() => {
+                                                setSelectionMode('all');
+                                                setSelectedEmployees(new Set());
+                                            }}
+                                        >
+                                            Todos
+                                        </Button>
                                     </div>
-                                    <p className="text-xs text-muted-foreground text-center">
-                                        Toda {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][formData.recurrenceDay || 0]}
-                                    </p>
                                 </div>
-                            )}
 
-                            {formData.recurrenceType === 'monthly' && (
-                                <div className="space-y-2 pt-2 border-t">
-                                    <label className="text-sm font-medium">Dia do Mês</label>
+                                {/* Employee Selection */}
+                                {selectionMode !== 'all' && (
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block">
+                                            {selectionMode === 'single' ? 'Selecione um funcionário' : `Funcionários (${selectedEmployees.size} selecionados)`}
+                                        </label>
+
+                                        {selectionMode === 'single' ? (
+                                            <select
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                                value={formData.assignedTo}
+                                                onChange={(e) => {
+                                                    setFormData(prev => ({ ...prev, assignedTo: e.target.value }));
+                                                    setSelectedEmployees(new Set([e.target.value]));
+                                                }}
+                                                required
+                                            >
+                                                {employees.map(emp => (
+                                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
+                                                ))}
+                                            </select>
+                                        ) : (
+                                            <div className="border border-input rounded-md p-2 sm:p-3 max-h-64 overflow-y-auto space-y-1">
+                                                {employees.map(emp => {
+                                                    const isSelected = selectedEmployees.has(emp.id);
+                                                    const isLocked = emp.id === preAssignedEmployeeId;
+
+                                                    return (
+                                                        <label
+                                                            key={emp.id}
+                                                            className={`flex items-center gap-3 p-3 rounded min-h-[44px] hover:bg-accent cursor-pointer transition-colors ${isLocked ? 'opacity-75 cursor-not-allowed' : ''
+                                                                }`}
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={isSelected}
+                                                                disabled={isLocked}
+                                                                onChange={(e) => {
+                                                                    const newSet = new Set(selectedEmployees);
+                                                                    if (e.target.checked) {
+                                                                        newSet.add(emp.id);
+                                                                    } else {
+                                                                        newSet.delete(emp.id);
+                                                                    }
+                                                                    setSelectedEmployees(newSet);
+                                                                }}
+                                                                className="h-5 w-5 rounded border-gray-300 shrink-0"
+                                                            />
+                                                            <span className="text-sm sm:text-base flex-1">
+                                                                {emp.name}
+                                                                {isLocked && <span className="ml-2 text-amber-600">🔒</span>}
+                                                            </span>
+                                                        </label>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {selectionMode === 'all' && (
+                                    <p className="text-xs text-muted-foreground mt-4">
+                                        ℹ️ Esta é uma tarefa comum. Ao ser cumprida por qualquer funcionário, será marcada como concluída para todos.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Agendamento</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Data de Início</label>
                                     <Input
-                                        type="number"
-                                        min="1"
-                                        max="31"
-                                        value={formData.recurrenceDay || 1}
-                                        onChange={(e) => setFormData({ ...formData, recurrenceDay: parseInt(e.target.value) })}
+                                        type="date"
+                                        name="dueDate"
+                                        value={formData.dueDate}
+                                        onChange={handleChange}
+                                        required
                                         disabled={!canEditDetails}
                                     />
-                                    <p className="text-xs text-muted-foreground">
-                                        Todo dia {formData.recurrenceDay || 1}
-                                    </p>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Repetição</label>
+                                    <select
+                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
+                                        value={formData.recurrenceType}
+                                        onChange={(e) => setFormData({ ...formData, recurrenceType: e.target.value as any })}
+                                        disabled={!canEditDetails}
+                                    >
+                                        <option value="none">Não repete (Apenas uma vez)</option>
+                                        <option value="daily">Diário (Todo dia)</option>
+                                        <option value="weekly">Semanal (Toda semana)</option>
+                                        <option value="monthly">Mensal (Todo mês)</option>
+                                    </select>
+                                </div>
+
+                                {formData.recurrenceType === 'weekly' && (
+                                    <div className="space-y-2 pt-2 border-t">
+                                        <label className="text-sm font-medium block text-center">Dia da Semana</label>
+                                        <div className="flex gap-1 justify-center">
+                                            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((day, index) => (
+                                                <button
+                                                    key={index}
+                                                    type="button"
+                                                    disabled={!canEditDetails}
+                                                    onClick={() => canEditDetails && setFormData({ ...formData, recurrenceDay: index })}
+                                                    className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border transition-colors ${formData.recurrenceDay === index
+                                                        ? 'bg-primary text-primary-foreground border-primary'
+                                                        : 'bg-transparent hover:bg-secondary'
+                                                        }`}
+                                                >
+                                                    {day}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            Toda {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][formData.recurrenceDay || 0]}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {formData.recurrenceType === 'monthly' && (
+                                    <div className="space-y-2 pt-2 border-t">
+                                        <label className="text-sm font-medium">Dia do Mês</label>
+                                        <Input
+                                            type="number"
+                                            min="1"
+                                            max="31"
+                                            value={formData.recurrenceDay || 1}
+                                            onChange={(e) => setFormData({ ...formData, recurrenceDay: parseInt(e.target.value) })}
+                                            disabled={!canEditDetails}
+                                        />
+                                        <p className="text-xs text-muted-foreground">
+                                            Todo dia {formData.recurrenceDay || 1}
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Response / Observations Field */}
                 <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-2">
                         <CardTitle>Resposta / Observações</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground mb-2">
-                            Espaço para observações adicionais ou resposta do funcionário/administrador.
-                        </p>
-                        <textarea
-                            name="response"
-                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="Digite aqui qualquer observação sobre a tarefa..."
-                            value={formData.response}
-                            onChange={handleChange}
-                        />
+                        <div className="flex justify-between items-center mb-2">
+                            <p className="text-sm text-muted-foreground">
+                            </p>
+                            <Button
+                                type="button"
+                                variant={isRecordingResponse ? "destructive" : "secondary"}
+                                size="sm"
+                                onClick={toggleRecordingResponse}
+                                className="flex items-center gap-2 animate-in fade-in shrink-0 ml-2"
+                            >
+                                {isRecordingResponse ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                                {isRecordingResponse ? 'Parar' : 'Gravar'}
+                            </Button>
+                        </div>
+                        <div className="relative">
+                            <textarea
+                                name="response"
+                                className={`flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isRecordingResponse ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                placeholder={isRecordingResponse ? "Ouvindo... pode falar..." : "Digite aqui qualquer observação sobre a tarefa..."}
+                                value={formData.response}
+                                onChange={handleChange}
+                            />
+                            {isRecordingResponse && (
+                                <span className="absolute bottom-2 right-2 flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>
+                            )}
+                        </div>
                     </CardContent>
                 </Card>
 
