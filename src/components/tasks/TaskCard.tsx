@@ -67,8 +67,8 @@ export function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps) {
                         </div>
                     </div>
 
-                    {task.description && task.description !== task.title && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
+                    {task.description && task.description.trim() !== task.title.trim() && (
+                        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                             {task.description}
                         </p>
                     )}
