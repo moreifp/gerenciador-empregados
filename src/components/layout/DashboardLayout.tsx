@@ -65,7 +65,7 @@ export const DashboardLayout = () => {
             {!isKiosk && role === 'admin' && (
                 <button
                     onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                    className="md:hidden fixed top-4 left-4 z-50 p-2 bg-card border rounded-md shadow-sm"
+                    className="md:hidden fixed top-4 right-4 z-50 p-2 bg-card border rounded-md shadow-sm"
                 >
                     {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                 </button>
