@@ -35,6 +35,7 @@ export default function TaskForm() {
         dueDate: new Date().toISOString().split('T')[0], // Default to today
         recurrenceType: 'none',
         recurrenceDay: new Date().getDay(),
+        recurrenceDays: [] as number[], // For custom recurrence
         photoPreview: '' as string | null,
         response: ''
     });
@@ -90,6 +91,7 @@ export default function TaskForm() {
                     dueDate: data.due_date || new Date().toISOString().split('T')[0],
                     recurrenceType: data.recurrence_type || 'none',
                     recurrenceDay: data.recurrence_day || new Date().getDay(),
+                    recurrenceDays: data.recurrence_days || [],
                     photoPreview: null, // Tasks don't have reference photos in current schema
                     response: data.response || ''
                 });
@@ -244,7 +246,8 @@ export default function TaskForm() {
             type: formData.type,
             due_date: formData.dueDate,
             recurrence_type: formData.recurrenceType,
-            recurrence_day: formData.recurrenceDay,
+            recurrence_day: formData.recurrenceType === 'custom' ? null : formData.recurrenceDay,
+            recurrence_days: formData.recurrenceType === 'custom' ? formData.recurrenceDays : null,
             response: formData.response, // Save response/observation
             ...(isEditing ? {} : { status: 'pending' }) // Only set status on create
             // reference_photo: formData.photoPreview // TODO: Add to schema if needed
@@ -586,7 +589,7 @@ export default function TaskForm() {
                                                 // I'll check schema first.
 
                                                 const isSelected = formData.recurrenceType === 'custom'
-                                                    ? (Array.isArray(formData.recurrenceDay) ? formData.recurrenceDay.includes(index) : formData.recurrenceDay === index)
+                                                    ? formData.recurrenceDays.includes(index)
                                                     : formData.recurrenceDay === index;
 
                                                 return (
@@ -597,10 +600,14 @@ export default function TaskForm() {
                                                         onClick={() => {
                                                             if (!canEditDetails) return;
                                                             if (formData.recurrenceType === 'custom') {
-                                                                // Multi-select logic simulation (needs backend support)
-                                                                // For now, let's keep it single select but styled as requested OR warn user.
-                                                                // Actually, let me check schema before writing code.
-                                                                setFormData({ ...formData, recurrenceDay: index });
+                                                                const currentDays = formData.recurrenceDays;
+                                                                let newDays;
+                                                                if (currentDays.includes(index)) {
+                                                                    newDays = currentDays.filter(d => d !== index);
+                                                                } else {
+                                                                    newDays = [...currentDays, index];
+                                                                }
+                                                                setFormData({ ...formData, recurrenceDays: newDays });
                                                             } else {
                                                                 setFormData({ ...formData, recurrenceDay: index });
                                                             }
@@ -618,7 +625,9 @@ export default function TaskForm() {
                                         <p className="text-xs text-muted-foreground text-center">
                                             {formData.recurrenceType === 'weekly'
                                                 ? `Toda ${['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][formData.recurrenceDay || 0]}`
-                                                : 'Repetir nos dias selecionados'
+                                                : `Repetir em: ${formData.recurrenceDays.length > 0
+                                                    ? formData.recurrenceDays.sort().map(d => ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'][d]).join(', ')
+                                                    : 'Nenhum dia selecionado'}`
                                             }
                                         </p>
                                     </div>

@@ -31,8 +31,9 @@ export interface Task {
     type: TaskType;
     dueDate: string; // ISO Date String
     status: TaskStatus;
-    recurrenceType: 'none' | 'daily' | 'weekly' | 'monthly';
+    recurrenceType: 'none' | 'daily' | 'weekly' | 'monthly' | 'custom';
     recurrenceDay?: number; // 0-6 for weekly, 1-31 for monthly
+    recurrenceDays?: number[]; // Array of 0-6 days for custom recurrence
     proof?: {
         photoUrl?: string;
         audioUrl?: string;

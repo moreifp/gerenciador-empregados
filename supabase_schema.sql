@@ -40,6 +40,22 @@ begin
   if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'response') then
     alter table public.tasks add column response text;
   end if;
+
+  -- Add recurrence_days column for custom multi-day selection
+  if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'recurrence_days') then
+    alter table public.tasks add column recurrence_days integer[];
+  end if;
+
+  -- Update recurrence_type check constraint to include 'custom'
+  -- Note: We first drop the existing constraint if it exists
+  if exists (select 1 from pg_constraint where conname = 'tasks_recurrence_type_check') then
+    alter table public.tasks drop constraint tasks_recurrence_type_check;
+  end if;
+  
+  -- Re-add constraint with 'custom'
+  alter table public.tasks add constraint tasks_recurrence_type_check 
+    check (recurrence_type in ('none', 'daily', 'weekly', 'monthly', 'custom'));
+
 end $$;
 
 -- 3. Table: Task Assignees
