@@ -438,39 +438,40 @@ export default function TaskForm() {
                                             ))}
                                         </select>
                                     ) : (
-                                        <select
-                                            multiple
-                                            className="flex min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                            value={Array.from(selectedEmployees)}
-                                            onChange={(e) => {
-                                                const options = Array.from(e.target.selectedOptions);
-                                                const values = options.map(opt => opt.value);
+                                        <div className="border border-input rounded-md p-2 sm:p-3 max-h-64 overflow-y-auto space-y-1">
+                                            {employees.map(emp => {
+                                                const isSelected = selectedEmployees.has(emp.id);
+                                                const isLocked = emp.id === preAssignedEmployeeId;
 
-                                                // Ensure pre-assigned employee is always included
-                                                if (preAssignedEmployeeId && !values.includes(preAssignedEmployeeId)) {
-                                                    values.push(preAssignedEmployeeId);
-                                                }
-
-                                                setSelectedEmployees(new Set(values));
-                                            }}
-                                        >
-                                            {employees.map(emp => (
-                                                <option
-                                                    key={emp.id}
-                                                    value={emp.id}
-                                                    disabled={emp.id === preAssignedEmployeeId}
-                                                    className={emp.id === preAssignedEmployeeId ? 'font-bold' : ''}
-                                                >
-                                                    {emp.name}{emp.id === preAssignedEmployeeId ? ' 🔒' : ''}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    )}
-
-                                    {selectionMode === 'multiple' && (
-                                        <p className="text-xs text-muted-foreground mt-2">
-                                            💡 Dica: Segure Ctrl (Windows) ou Cmd (Mac) para selecionar múltiplos
-                                        </p>
+                                                return (
+                                                    <label
+                                                        key={emp.id}
+                                                        className={`flex items-center gap-3 p-3 rounded min-h-[44px] hover:bg-accent cursor-pointer transition-colors ${isLocked ? 'opacity-75 cursor-not-allowed' : ''
+                                                            }`}
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            disabled={isLocked}
+                                                            onChange={(e) => {
+                                                                const newSet = new Set(selectedEmployees);
+                                                                if (e.target.checked) {
+                                                                    newSet.add(emp.id);
+                                                                } else {
+                                                                    newSet.delete(emp.id);
+                                                                }
+                                                                setSelectedEmployees(newSet);
+                                                            }}
+                                                            className="h-5 w-5 rounded border-gray-300 shrink-0"
+                                                        />
+                                                        <span className="text-sm sm:text-base flex-1">
+                                                            {emp.name}
+                                                            {isLocked && <span className="ml-2 text-amber-600">🔒</span>}
+                                                        </span>
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
                                     )}
                                 </div>
                             )}
