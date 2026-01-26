@@ -40,6 +40,10 @@ begin
   if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'response') then
     alter table public.tasks add column response text;
   end if;
+  -- Add is_shared column if it doesn't exist (fix for schema cache error)
+  if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'is_shared') then
+    alter table public.tasks add column is_shared boolean default false;
+  end if;
 
   -- Add recurrence_days column for custom multi-day selection
   if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'recurrence_days') then
