@@ -32,7 +32,7 @@ function App() {
                         <Route path="tasks/:id" element={<TaskForm />} />
                     </Route>
 
-                    <Route path="*" element={<Navigate to="/" replace />} />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
             </Router>
         </AuthProvider>

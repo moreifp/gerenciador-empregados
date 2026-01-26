@@ -19,8 +19,18 @@ export default function Login() {
     const [employeePass, setEmployeePass] = useState('');
     const [error, setError] = useState('');
 
-    const { loginAdmin, loginEmployee, loginKiosk } = useAuth();
+    const { loginAdmin, loginEmployee, loginKiosk, user, isLoading } = useAuth();
     const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!isLoading && user) {
+            if (user.role === 'employee') {
+                navigate('/tasks');
+            } else {
+                navigate('/');
+            }
+        }
+    }, [user, isLoading, navigate]);
 
     useEffect(() => {
         const fetchEmployees = async () => {

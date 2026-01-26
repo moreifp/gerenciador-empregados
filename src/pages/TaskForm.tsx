@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TaskType } from '@/types';
@@ -10,6 +11,8 @@ import { supabase } from '@/lib/supabase';
 export default function TaskForm() {
     const navigate = useNavigate();
     const { id } = useParams();
+    const { role } = useAuth();
+    const canEditDetails = role === 'admin';
     const [searchParams] = useSearchParams();
     const preAssignedEmployeeId = searchParams.get('employeeId');
     const isEditing = !!id;
@@ -298,6 +301,7 @@ export default function TaskForm() {
                                     variant={isRecording ? "destructive" : "secondary"}
                                     size="sm"
                                     onClick={toggleRecording}
+                                    disabled={!canEditDetails}
                                     className="flex items-center gap-2 animate-in fade-in"
                                 >
                                     {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
@@ -311,6 +315,7 @@ export default function TaskForm() {
                                     placeholder={isRecording ? "Ouvindo... vá falando..." : "Descreva os detalhes ou use o microfone para ditar..."}
                                     value={formData.description}
                                     onChange={handleChange}
+                                    disabled={!canEditDetails}
                                 />
                                 {isRecording && (
                                     <span className="absolute bottom-2 right-2 flex h-3 w-3">
@@ -326,28 +331,32 @@ export default function TaskForm() {
                             <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
 
                             {!formData.photoPreview && !isCameraOpen ? (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Upload Box */}
-                                    <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
-                                        <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                                        <p className="text-xs font-medium">Enviar Foto</p>
-                                        <Input
-                                            type="file"
-                                            accept="image/*"
-                                            className="absolute inset-0 opacity-0 cursor-pointer"
-                                            onChange={handlePhotoChange}
-                                        />
-                                    </div>
+                                canEditDetails ? (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* Upload Box */}
+                                        <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
+                                            <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
+                                            <p className="text-xs font-medium">Enviar Foto</p>
+                                            <Input
+                                                type="file"
+                                                accept="image/*"
+                                                className="absolute inset-0 opacity-0 cursor-pointer"
+                                                onChange={handlePhotoChange}
+                                            />
+                                        </div>
 
-                                    {/* Camera Box */}
-                                    <div
-                                        className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
-                                        onClick={startCamera}
-                                    >
-                                        <Camera className="h-8 w-8 mb-2 opacity-50" />
-                                        <p className="text-xs font-medium">Tirar Foto Agora</p>
+                                        {/* Camera Box */}
+                                        <div
+                                            className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
+                                            onClick={startCamera}
+                                        >
+                                            <Camera className="h-8 w-8 mb-2 opacity-50" />
+                                            <p className="text-xs font-medium">Tirar Foto Agora</p>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic">Nenhuma foto de referência fornecida.</p>
+                                )
                             ) : isCameraOpen ? (
                                 <div className="relative rounded-lg overflow-hidden border bg-black">
                                     <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover"></video>
@@ -361,15 +370,17 @@ export default function TaskForm() {
                             ) : (
                                 <div className="relative rounded-lg overflow-hidden border">
                                     <img src={formData.photoPreview!} alt="Preview" className="w-full h-64 object-cover" />
-                                    <Button
-                                        type="button"
-                                        variant="destructive"
-                                        size="icon"
-                                        className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                                        onClick={removePhoto}
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
+                                    {canEditDetails && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="icon"
+                                            className="absolute top-2 right-2 h-8 w-8 rounded-full"
+                                            onClick={removePhoto}
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -441,7 +452,6 @@ export default function TaskForm() {
                                             }}
                                             required
                                         >
-                                            <option value="">Selecione...</option>
                                             {employees.map(emp => (
                                                 <option key={emp.id} value={emp.id}>{emp.name}</option>
                                             ))}
@@ -506,6 +516,7 @@ export default function TaskForm() {
                                     value={formData.dueDate}
                                     onChange={handleChange}
                                     required
+                                    disabled={!canEditDetails}
                                 />
                             </div>
 
@@ -515,6 +526,7 @@ export default function TaskForm() {
                                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background disabled:cursor-not-allowed disabled:opacity-50"
                                     value={formData.recurrenceType}
                                     onChange={(e) => setFormData({ ...formData, recurrenceType: e.target.value as any })}
+                                    disabled={!canEditDetails}
                                 >
                                     <option value="none">Não repete (Apenas uma vez)</option>
                                     <option value="daily">Diário (Todo dia)</option>
@@ -531,7 +543,8 @@ export default function TaskForm() {
                                             <button
                                                 key={index}
                                                 type="button"
-                                                onClick={() => setFormData({ ...formData, recurrenceDay: index })}
+                                                disabled={!canEditDetails}
+                                                onClick={() => canEditDetails && setFormData({ ...formData, recurrenceDay: index })}
                                                 className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border transition-colors ${formData.recurrenceDay === index
                                                     ? 'bg-primary text-primary-foreground border-primary'
                                                     : 'bg-transparent hover:bg-secondary'
@@ -556,6 +569,7 @@ export default function TaskForm() {
                                         max="31"
                                         value={formData.recurrenceDay || 1}
                                         onChange={(e) => setFormData({ ...formData, recurrenceDay: parseInt(e.target.value) })}
+                                        disabled={!canEditDetails}
                                     />
                                     <p className="text-xs text-muted-foreground">
                                         Todo dia {formData.recurrenceDay || 1}
@@ -591,7 +605,7 @@ export default function TaskForm() {
                     </Button>
                     <Button type="submit" size="lg" className="w-full sm:w-auto sm:px-8">
                         <Save className="mr-2 h-4 w-4" />
-                        Salvar Tarefa
+                        {canEditDetails ? 'Salvar Tarefa' : 'Enviar Resposta'}
                     </Button>
                 </div>
             </form >

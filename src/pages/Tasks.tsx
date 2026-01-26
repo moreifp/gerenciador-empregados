@@ -277,7 +277,7 @@ export default function Tasks() {
                             key={task.id}
                             task={task}
                             onStatusChange={handleStatusChange}
-                            onEdit={canEditTask ? handleEdit : undefined}
+                            onEdit={handleEdit}
                         />
                     ))}
                     {tasks.length === 0 && (
