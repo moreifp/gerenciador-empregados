@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera } from 'lucide-react';
+import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,11 +34,13 @@ export default function TaskForm() {
         photoPreview: '' as string | null
     });
 
-    const [employees, setEmployees] = useState<{ id: string, name: string }[]>([]);
+    const [employees, setEmployees] = useState<{ id: string, name: string, photo?: string, role?: string }[]>([]);
+    const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set(preAssignedEmployeeId ? [preAssignedEmployeeId] : []));
+    const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('single');
 
     useEffect(() => {
         const fetchEmployees = async () => {
-            const { data } = await supabase.from('employees').select('id, name').eq('active', true);
+            const { data } = await supabase.from('employees').select('id, name, photo, role').eq('active', true).order('name');
             if (data) setEmployees(data);
         };
         fetchEmployees();
@@ -191,12 +193,13 @@ export default function TaskForm() {
             ? formData.description.substring(0, 50) + '...'
             : formData.description) || 'Nova Tarefa';
 
-        const isSharedTask = formData.assignedTo === 'ALL';
+        const isSharedTask = selectionMode === 'all';
+        const isMultiAssignee = selectionMode === 'multiple' && selectedEmployees.size > 1;
 
         const payload = {
             title: finalTitle,
             description: formData.description,
-            assigned_to: isSharedTask ? null : formData.assignedTo,
+            assigned_to: (isSharedTask || isMultiAssignee) ? null : formData.assignedTo,
             is_shared: isSharedTask,
             type: formData.type,
             due_date: formData.dueDate,
@@ -207,19 +210,46 @@ export default function TaskForm() {
         };
 
         try {
+            let taskId = id;
             let error;
+
             if (isEditing) {
                 const { error: updateError } = await supabase
                     .from('tasks')
                     .update(payload)
                     .eq('id', id);
                 error = updateError;
+
+                // Delete existing assignees if in multiple mode
+                if (isMultiAssignee) {
+                    await supabase.from('task_assignees').delete().eq('task_id', id);
+                }
             } else {
-                const { error: insertError } = await supabase.from('tasks').insert([payload]);
+                const { data, error: insertError } = await supabase
+                    .from('tasks')
+                    .insert([payload])
+                    .select()
+                    .single();
                 error = insertError;
+                if (data) taskId = data.id;
             }
 
             if (error) throw error;
+
+            // If multiple assignees, insert into task_assignees table
+            if (isMultiAssignee && taskId) {
+                const assignees = Array.from(selectedEmployees).map(employeeId => ({
+                    task_id: taskId,
+                    employee_id: employeeId
+                }));
+
+                const { error: assigneesError } = await supabase
+                    .from('task_assignees')
+                    .insert(assignees);
+
+                if (assigneesError) throw assigneesError;
+            }
+
             navigate('/tasks');
         } catch (error) {
             console.error('Error saving task:', error);
@@ -343,24 +373,112 @@ export default function TaskForm() {
                         <CardHeader>
                             <CardTitle>Responsável</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                            <label className="text-sm font-medium mb-2 block">Quem fará essa tarefa?</label>
-                            <select
-                                name="assignedTo"
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                value={formData.assignedTo}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="">Selecione um funcionário</option>
-                                <option value="ALL">👥 Todos os Funcionários</option>
-                                {employees.map(emp => (
-                                    <option key={emp.id} value={emp.id}>{emp.name}</option>
-                                ))}
-                            </select>
-                            {formData.assignedTo === 'ALL' && (
-                                <p className="text-xs text-muted-foreground mt-2">
+                        <CardContent className="space-y-4">
+                            {/* Selection Mode Buttons */}
+                            <div>
+                                <label className="text-sm font-medium mb-2 block">Modo de Atribuição</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    <Button
+                                        type="button"
+                                        variant={selectionMode === 'single' ? 'default' : 'outline'}
+                                        className="text-xs"
+                                        onClick={() => {
+                                            setSelectionMode('single');
+                                            if (selectedEmployees.size > 0) {
+                                                const first = Array.from(selectedEmployees)[0];
+                                                setSelectedEmployees(new Set([first]));
+                                                setFormData(prev => ({ ...prev, assignedTo: first }));
+                                            }
+                                        }}
+                                    >
+                                        Um
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={selectionMode === 'multiple' ? 'default' : 'outline'}
+                                        className="text-xs"
+                                        onClick={() => setSelectionMode('multiple')}
+                                    >
+                                        Vários
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant={selectionMode === 'all' ? 'default' : 'outline'}
+                                        className="text-xs"
+                                        onClick={() => {
+                                            setSelectionMode('all');
+                                            setSelectedEmployees(new Set());
+                                        }}
+                                    >
+                                        Todos
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Employee Selection */}
+                            {selectionMode !== 'all' && (
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">
+                                        {selectionMode === 'single' ? 'Selecione um funcionário' : `Funcionários Selecionados (${selectedEmployees.size})`}
+                                    </label>
+                                    <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                                        {employees.map((employee) => {
+                                            const isSelected = selectedEmployees.has(employee.id);
+                                            return (
+                                                <button
+                                                    key={employee.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (selectionMode === 'single') {
+                                                            setSelectedEmployees(new Set([employee.id]));
+                                                            setFormData(prev => ({ ...prev, assignedTo: employee.id }));
+                                                        } else {
+                                                            const newSet = new Set(selectedEmployees);
+                                                            if (isSelected) {
+                                                                newSet.delete(employee.id);
+                                                            } else {
+                                                                newSet.add(employee.id);
+                                                            }
+                                                            setSelectedEmployees(newSet);
+                                                        }
+                                                    }}
+                                                    className={`flex items-center gap-3 p-2 rounded-lg border-2 transition-all text-left ${isSelected
+                                                        ? 'border-primary bg-primary/5'
+                                                        : 'border-border hover:border-primary/50'
+                                                        }`}
+                                                >
+                                                    <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center shrink-0">
+                                                        {employee.photo ? (
+                                                            <img src={employee.photo} alt={employee.name} className="h-full w-full object-cover" />
+                                                        ) : (
+                                                            <span className="text-xs font-bold text-primary/60">{employee.name[0]}</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="font-medium text-sm truncate">{employee.name}</p>
+                                                        <p className="text-xs text-muted-foreground truncate">{employee.role}</p>
+                                                    </div>
+                                                    {isSelected && (
+                                                        <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                                                            <Check className="h-3 w-3 text-white" />
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Info Messages */}
+                            {selectionMode === 'all' && (
+                                <p className="text-xs text-muted-foreground">
                                     ℹ️ Esta tarefa aparecerá para todos os funcionários. Quando qualquer um concluir, será marcada como concluída para todos.
+                                </p>
+                            )}
+                            {selectionMode === 'multiple' && selectedEmployees.size > 0 && (
+                                <p className="text-xs text-muted-foreground">
+                                    ℹ️ Esta tarefa aparecerá para os {selectedEmployees.size} funcionários selecionados. Quando qualquer um concluir, será marcada como concluída para todos.
                                 </p>
                             )}
                         </CardContent>
