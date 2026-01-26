@@ -67,9 +67,11 @@ export function TaskCard({ task, onStatusChange, onEdit }: TaskCardProps) {
                         </div>
                     </div>
 
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                        {task.description}
-                    </p>
+                    {task.description && task.description !== task.title && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                            {task.description}
+                        </p>
+                    )}
 
                     {task.proof?.photoUrl && (
                         <div className="rounded-md overflow-hidden h-20 w-32 bg-slate-100 border">
