@@ -31,7 +31,8 @@ export default function TaskForm() {
         dueDate: new Date().toISOString().split('T')[0], // Default to today
         recurrenceType: 'none',
         recurrenceDay: new Date().getDay(),
-        photoPreview: '' as string | null
+        photoPreview: '' as string | null,
+        response: ''
     });
 
     const [employees, setEmployees] = useState<{ id: string, name: string, photo?: string, role?: string }[]>([]);
@@ -106,7 +107,8 @@ export default function TaskForm() {
                     dueDate: data.due_date || new Date().toISOString().split('T')[0],
                     recurrenceType: data.recurrence_type || 'none',
                     recurrenceDay: data.recurrence_day || new Date().getDay(),
-                    photoPreview: null // Tasks don't have reference photos in current schema
+                    photoPreview: null, // Tasks don't have reference photos in current schema
+                    response: data.response || ''
                 });
             }
         } catch (error) {
@@ -211,6 +213,7 @@ export default function TaskForm() {
             due_date: formData.dueDate,
             recurrence_type: formData.recurrenceType,
             recurrence_day: formData.recurrenceDay,
+            response: formData.response, // Save response/observation
             ...(isEditing ? {} : { status: 'pending' }) // Only set status on create
             // reference_photo: formData.photoPreview // TODO: Add to schema if needed
         };
@@ -562,6 +565,25 @@ export default function TaskForm() {
                         </CardContent>
                     </Card>
                 </div>
+
+                {/* Response / Observations Field */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Resposta / Observações</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-2">
+                            Espaço para observações adicionais ou resposta do funcionário/administrador.
+                        </p>
+                        <textarea
+                            name="response"
+                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            placeholder="Digite aqui qualquer observação sobre a tarefa..."
+                            value={formData.response}
+                            onChange={handleChange}
+                        />
+                    </CardContent>
+                </Card>
 
                 <div className="flex flex-col sm:flex-row justify-end gap-3 sm:gap-4 pt-4">
                     <Button type="button" variant="outline" size="lg" onClick={() => navigate('/tasks')} className="w-full sm:w-auto">

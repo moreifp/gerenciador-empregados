@@ -46,6 +46,7 @@ export default function Tasks() {
                         comment: t.proof_comment,
                         completedAt: t.completed_at
                     },
+                    response: t.response,
                     createdAt: t.created_at
                 }));
                 setBaseTasks(mappedTasks);

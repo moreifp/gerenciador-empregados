@@ -39,5 +39,6 @@ export interface Task {
         comment?: string;
         completedAt: string;
     };
+    response?: string; // Campo de resposta/observação
     createdAt: string;
 }
