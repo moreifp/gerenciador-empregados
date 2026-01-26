@@ -1,5 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, User } from 'lucide-react';
+import { Plus, Trash2, User, Pencil } from 'lucide-react';
 import { Employee } from '@/types';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -141,9 +141,20 @@ export default function Dashboard() {
                         key={employee.id}
                         className="relative group overflow-hidden hover:shadow-lg transition-all min-h-[250px] flex flex-col"
                     >
-                        {/* Delete Button - Only for Admin */}
+                        {/* Edit and Delete Buttons - Only for Admin */}
                         {canManageEmployees && (
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex gap-2">
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full shadow-sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate(`/employees/${employee.id}`);
+                                    }}
+                                >
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
                                 <Button
                                     variant="destructive"
                                     size="icon"
