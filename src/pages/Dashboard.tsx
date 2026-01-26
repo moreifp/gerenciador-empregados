@@ -183,9 +183,7 @@ export default function Dashboard() {
 
                             <h3 className="text-xl font-bold truncate w-full">{employee.name}</h3>
 
-                            <div className="mt-4 w-full pt-4 border-t text-sm text-muted-foreground flex flex-col gap-1">
-                                <span className="text-xs">Clique para ver tarefas</span>
-                            </div>
+
                         </CardContent>
                     </Card>
                 ))}
