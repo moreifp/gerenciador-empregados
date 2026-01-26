@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Dashboard() {
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     const { role } = useAuth();
@@ -31,6 +32,34 @@ export default function Dashboard() {
 
             if (error) throw error;
             if (data) setEmployees(data as any);
+
+            // Fetch active tasks for counts
+            const { data: tasksData } = await supabase
+                .from('tasks')
+                .select('assigned_to, is_shared, task_assignees(employee_id)')
+                .neq('status', 'completed');
+
+            if (tasksData) {
+                const counts: Record<string, number> = {};
+                // Initialize counts
+                if (data) data.forEach((emp: any) => counts[emp.id] = 0);
+
+                tasksData.forEach((task: any) => {
+                    if (task.is_shared) {
+                        // Shared task counts for everyone
+                        Object.keys(counts).forEach(empId => counts[empId]++);
+                    } else if (task.assigned_to) {
+                        if (counts[task.assigned_to] !== undefined) counts[task.assigned_to]++;
+                    } else if (task.task_assignees && task.task_assignees.length > 0) {
+                        // Multi-assignee support
+                        task.task_assignees.forEach((assignee: any) => {
+                            if (counts[assignee.employee_id] !== undefined) counts[assignee.employee_id]++;
+                        });
+                    }
+                });
+                setTaskCounts(counts);
+            }
+
         } catch (error) {
             console.error('Error fetching employees:', error);
         } finally {
@@ -170,7 +199,7 @@ export default function Dashboard() {
 
                         <CardContent className="flex flex-col items-center justify-center flex-1 p-6 text-center">
                             <div
-                                className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center mb-4 ring-4 ring-background shadow-md cursor-pointer md:hover:scale-105 md:hover:ring-primary transition-all duration-300"
+                                className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center mb-4 ring-4 ring-background shadow-md cursor-pointer md:hover:scale-105 md:hover:ring-primary transition-all duration-300 relative"
                                 onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
                                 title="Ver tarefas deste funcionário"
                             >
@@ -178,6 +207,12 @@ export default function Dashboard() {
                                     <img src={employee.photo} alt={employee.name} className="h-24 w-24 rounded-full object-cover" />
                                 ) : (
                                     <User className="h-12 w-12 text-primary/60" />
+                                )}
+
+                                {taskCounts[employee.id] > 0 && (
+                                    <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shadow-md animate-in zoom-in">
+                                        {taskCounts[employee.id]}
+                                    </div>
                                 )}
                             </div>
 
