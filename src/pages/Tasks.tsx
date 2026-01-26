@@ -22,6 +22,13 @@ export default function Tasks() {
     const employeeId = searchParams.get('employeeId');
 
     useEffect(() => {
+        if (employeeId) {
+            setSelectedEmployeeId(employeeId);
+        }
+    }, [employeeId]);
+
+
+    useEffect(() => {
         const fetchData = async () => {
             // Fetch Employees
             const { data: empData } = await supabase.from('employees').select('*').eq('active', true);
