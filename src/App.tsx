@@ -24,6 +24,7 @@ function App() {
 
                     <Route path="/" element={<ProtectedLayout />}>
                         <Route index element={<Dashboard />} />
+                        <Route path="dashboard" element={<Dashboard />} />
                         <Route path="employees/new" element={<EmployeeForm />} />
                         <Route path="employees/:id" element={<EmployeeForm />} />
                         <Route path="tasks" element={<Tasks />} />

@@ -19,21 +19,6 @@ export interface Employee {
     };
 }
 
-export interface Group {
-    id: string;
-    name: string;
-    color: string; // Hex color
-    icon: string; // Lucide icon name
-    createdAt: string;
-}
-
-export interface GroupMember {
-    id: string;
-    groupId: string;
-    employeeId: string;
-    createdAt: string;
-}
-
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'blocked';
 export type TaskType = 'routine' | 'one_off';
 
@@ -42,7 +27,6 @@ export interface Task {
     title: string;
     description: string;
     assignedTo?: string; // Employee ID - optional for shared tasks
-    groupId?: string; // Group ID - optional for group tasks
     isShared?: boolean; // True if task is for all employees
     type: TaskType;
     dueDate: string; // ISO Date String
