@@ -343,7 +343,6 @@ export default function Tasks() {
                             </div>
                             <div className="text-center">
                                 <p className="font-semibold text-sm leading-tight">{emp.name}</p>
-                                <p className="text-xs text-muted-foreground mt-1">{emp.role}</p>
                             </div>
                         </button>
                     );
