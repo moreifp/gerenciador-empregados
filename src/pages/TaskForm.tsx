@@ -421,7 +421,7 @@ export default function TaskForm() {
                                     <label className="text-sm font-medium mb-2 block">
                                         {selectionMode === 'single' ? 'Selecione um funcionário' : `Funcionários Selecionados (${selectedEmployees.size})`}
                                     </label>
-                                    <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto">
+                                    <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto">
                                         {employees.map((employee) => {
                                             const isSelected = selectedEmployees.has(employee.id);
                                             return (
@@ -433,6 +433,11 @@ export default function TaskForm() {
                                                             setSelectedEmployees(new Set([employee.id]));
                                                             setFormData(prev => ({ ...prev, assignedTo: employee.id }));
                                                         } else {
+                                                            // Prevent removing pre-assigned employee
+                                                            if (isSelected && employee.id === preAssignedEmployeeId) {
+                                                                return; // Cannot deselect pre-assigned employee
+                                                            }
+
                                                             const newSet = new Set(selectedEmployees);
                                                             if (isSelected) {
                                                                 newSet.delete(employee.id);
@@ -445,6 +450,9 @@ export default function TaskForm() {
                                                     className={`flex items-center gap-3 p-2 rounded-lg border-2 transition-all text-left ${isSelected
                                                         ? 'border-primary bg-primary/5'
                                                         : 'border-border hover:border-primary/50'
+                                                        } ${employee.id === preAssignedEmployeeId && selectionMode === 'multiple'
+                                                            ? 'opacity-75 cursor-not-allowed'
+                                                            : ''
                                                         }`}
                                                 >
                                                     <div className="h-8 w-8 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center shrink-0">
@@ -477,9 +485,16 @@ export default function TaskForm() {
                                 </p>
                             )}
                             {selectionMode === 'multiple' && selectedEmployees.size > 0 && (
-                                <p className="text-xs text-muted-foreground">
-                                    ℹ️ Esta tarefa aparecerá para os {selectedEmployees.size} funcionários selecionados. Quando qualquer um concluir, será marcada como concluída para todos.
-                                </p>
+                                <>
+                                    <p className="text-xs text-muted-foreground">
+                                        ℹ️ Esta tarefa aparecerá para os {selectedEmployees.size} funcionários selecionados. Quando qualquer um concluir, será marcada como concluída para todos.
+                                    </p>
+                                    {preAssignedEmployeeId && (
+                                        <p className="text-xs text-amber-600">
+                                            🔒 O funcionário original não pode ser removido da seleção.
+                                        </p>
+                                    )}
+                                </>
                             )}
                         </CardContent>
                     </Card>
