@@ -193,6 +193,12 @@ export default function TaskForm() {
             ? formData.description.substring(0, 50) + '...'
             : formData.description) || 'Nova Tarefa';
 
+        // Validate multiple selection mode
+        if (selectionMode === 'multiple' && selectedEmployees.size < 2) {
+            alert('No modo "Vários", você deve selecionar pelo menos 2 funcionários.');
+            return;
+        }
+
         const isSharedTask = selectionMode === 'all';
         const isMultiAssignee = selectionMode === 'multiple' && selectedEmployees.size > 1;
 
@@ -476,23 +482,10 @@ export default function TaskForm() {
                                 </div>
                             )}
 
-                            {/* Info Messages */}
                             {selectionMode === 'all' && (
-                                <p className="text-xs text-muted-foreground">
-                                    ℹ️ Esta tarefa aparecerá para todos os funcionários. Quando qualquer um concluir, será marcada como concluída para todos.
+                                <p className="text-xs text-muted-foreground mt-4">
+                                    ℹ️ Esta é uma tarefa comum. Ao ser cumprida por qualquer funcionário, será marcada como concluída para todos.
                                 </p>
-                            )}
-                            {selectionMode === 'multiple' && selectedEmployees.size > 0 && (
-                                <>
-                                    <p className="text-xs text-muted-foreground">
-                                        ℹ️ Esta tarefa aparecerá para os {selectedEmployees.size} funcionários selecionados. Quando qualquer um concluir, será marcada como concluída para todos.
-                                    </p>
-                                    {preAssignedEmployeeId && (
-                                        <p className="text-xs text-amber-600">
-                                            🔒 O funcionário original não pode ser removido da seleção.
-                                        </p>
-                                    )}
-                                </>
                             )}
                         </CardContent>
                     </Card>
