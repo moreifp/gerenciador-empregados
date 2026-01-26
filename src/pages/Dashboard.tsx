@@ -54,22 +54,7 @@ export default function Dashboard() {
         }
     };
 
-    // Format phone number to (xx) xxxxx-xxxx
-    const formatPhone = (phone: string) => {
-        if (!phone) return '';
-        // Remove all non-numeric characters
-        const cleaned = phone.replace(/\D/g, '');
 
-        // Format based on length
-        if (cleaned.length === 11) {
-            // (xx) xxxxx-xxxx
-            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
-        } else if (cleaned.length === 10) {
-            // (xx) xxxx-xxxx
-            return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
-        }
-        return phone; // Return original if doesn't match expected length
-    };
 
     // Kiosk View - Simple grid of employee photos
     if (isKiosk) {
@@ -197,10 +182,9 @@ export default function Dashboard() {
                             </div>
 
                             <h3 className="text-xl font-bold truncate w-full">{employee.name}</h3>
-                            <p className="text-sm font-medium text-primary/80 mb-2">{employee.role}</p>
 
                             <div className="mt-4 w-full pt-4 border-t text-sm text-muted-foreground flex flex-col gap-1">
-                                <span className="truncate">{formatPhone(employee.phone)}</span>
+                                <span className="text-xs">Clique para ver tarefas</span>
                             </div>
                         </CardContent>
                     </Card>
