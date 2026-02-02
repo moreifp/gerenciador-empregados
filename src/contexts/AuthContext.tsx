@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
-// TODO: Update this with the actual UUID from Supabase after creating the admin employee record
-// This is the employee ID that will receive tasks created by employees
-export const ADMIN_EMPLOYEE_ID = 'admin-placeholder'; // Replace with actual UUID from employees table
+// Administrator employee ID from Supabase employees table
+export const ADMIN_EMPLOYEE_ID = '940f117c-c854-4450-a1fa-caaa28d3a5f0';
 
 type UserRole = 'admin' | 'employee' | 'kiosk' | null;
 
