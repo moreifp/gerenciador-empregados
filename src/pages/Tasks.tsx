@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TaskCard } from '@/components/tasks/TaskCard';
 import { Task, Employee } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, ADMIN_EMPLOYEE_ID } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Loading } from '@/components/ui/loading';
 
@@ -39,8 +39,24 @@ export default function Tasks() {
     useEffect(() => {
         const fetchData = async () => {
             // Fetch Employees
-            const { data: empData } = await supabase.from('employees').select('*').eq('active', true);
-            if (empData) setEmployees(empData as any);
+            const { data: empData } = await supabase
+                .from('employees')
+                .select('*')
+                .eq('active', true)
+                .order('name');
+
+            if (empData) {
+                // Ordenar: admin primeiro, depois outros alfabeticamente
+                const sortedData = (empData as any[]).sort((a, b) => {
+                    const aIsAdmin = a.role === 'admin' || a.id === ADMIN_EMPLOYEE_ID;
+                    const bIsAdmin = b.role === 'admin' || b.id === ADMIN_EMPLOYEE_ID;
+
+                    if (aIsAdmin) return -1;
+                    if (bIsAdmin) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                setEmployees(sortedData as any);
+            }
 
             // Fetch Tasks with Assignees
             const { data: taskData } = await supabase
