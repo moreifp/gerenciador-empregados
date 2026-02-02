@@ -1,11 +1,11 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, User, Pencil } from 'lucide-react';
+import { Plus, Trash2, User, Pencil, Crown } from 'lucide-react';
 import { Employee } from '@/types';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, ADMIN_EMPLOYEE_ID } from '@/contexts/AuthContext';
 import { Loading } from '@/components/ui/loading';
 
 export default function Dashboard() {
@@ -32,7 +32,17 @@ export default function Dashboard() {
                 .order('name');
 
             if (error) throw error;
-            if (data) setEmployees(data as any);
+            if (data) {
+                // Sort employees: admin first, then others alphabetically
+                const sortedData = (data as any[]).sort((a, b) => {
+                    // Admin always first
+                    if (a.role === 'admin' || a.id === ADMIN_EMPLOYEE_ID) return -1;
+                    if (b.role === 'admin' || b.id === ADMIN_EMPLOYEE_ID) return 1;
+                    // Other employees alphabetically
+                    return a.name.localeCompare(b.name);
+                });
+                setEmployees(sortedData as any);
+            }
 
             // Fetch active tasks for counts
             const { data: tasksData } = await supabase
@@ -170,61 +180,77 @@ export default function Dashboard() {
                     <div className="md:col-span-3">
                         <Loading text="Carregando equipe..." className="py-10" />
                     </div>
-                ) : employees.map((employee) => (
-                    <Card
-                        key={employee.id}
-                        className="relative group overflow-hidden hover:shadow-lg transition-all min-h-[250px] flex flex-col"
-                    >
-                        {/* Edit and Delete Buttons - Only for Admin */}
-                        {canManageEmployees && (
-                            <div className="hidden md:flex absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 gap-2">
-                                <Button
-                                    variant="secondary"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full shadow-sm"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigate(`/employees/${employee.id}`);
-                                    }}
+                ) : employees.map((employee) => {
+                    const isAdmin = employee.role === 'admin' || employee.id === ADMIN_EMPLOYEE_ID;
+
+                    return (
+                        <Card
+                            key={employee.id}
+                            className={`relative group overflow-hidden hover:shadow-lg transition-all min-h-[250px] flex flex-col ${isAdmin
+                                    ? 'border-2 border-amber-400 bg-gradient-to-br from-amber-50/50 to-yellow-50/30 dark:from-amber-950/20 dark:to-yellow-950/10'
+                                    : ''
+                                }`}
+                        >
+                            {/* Admin Badge */}
+                            {isAdmin && (
+                                <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-gradient-to-r from-amber-400 to-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                                    <Crown className="h-3.5 w-3.5 fill-current" />
+                                    Administrador
+                                </div>
+                            )}
+
+                            {/* Edit and Delete Buttons - Only for Admin, but NOT for admin employee */}
+                            {canManageEmployees && !isAdmin && (
+                                <div className="hidden md:flex absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 gap-2">
+                                    <Button
+                                        variant="secondary"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full shadow-sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigate(`/employees/${employee.id}`);
+                                        }}
+                                    >
+                                        <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full shadow-sm"
+                                        onClick={(e) => handleDelete(employee.id, e)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+
+                            <CardContent className="flex flex-col items-center justify-center flex-1 p-6 text-center">
+                                <div
+                                    className={`h-24 w-24 rounded-full flex items-center justify-center mb-4 ring-4 shadow-md cursor-pointer md:hover:scale-105 transition-all duration-300 relative ${isAdmin
+                                            ? 'bg-gradient-to-br from-amber-300/40 to-yellow-300/40 ring-amber-300 md:hover:ring-amber-400'
+                                            : 'bg-gradient-to-br from-primary/20 to-blue-200 ring-background md:hover:ring-primary'
+                                        }`}
+                                    onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
+                                    title="Ver tarefas deste funcionário"
                                 >
-                                    <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-full shadow-sm"
-                                    onClick={(e) => handleDelete(employee.id, e)}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        )}
+                                    {employee.photo ? (
+                                        <img src={employee.photo} alt={employee.name} className="h-24 w-24 rounded-full object-cover" />
+                                    ) : (
+                                        <User className="h-12 w-12 text-primary/60" />
+                                    )}
 
-                        <CardContent className="flex flex-col items-center justify-center flex-1 p-6 text-center">
-                            <div
-                                className="h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-blue-200 flex items-center justify-center mb-4 ring-4 ring-background shadow-md cursor-pointer md:hover:scale-105 md:hover:ring-primary transition-all duration-300 relative"
-                                onClick={() => navigate(`/tasks?employeeId=${employee.id}`)}
-                                title="Ver tarefas deste funcionário"
-                            >
-                                {employee.photo ? (
-                                    <img src={employee.photo} alt={employee.name} className="h-24 w-24 rounded-full object-cover" />
-                                ) : (
-                                    <User className="h-12 w-12 text-primary/60" />
-                                )}
+                                    {taskCounts[employee.id] > 0 && (
+                                        <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shadow-md animate-in zoom-in">
+                                            {taskCounts[employee.id]}
+                                        </div>
+                                    )}
+                                </div>
 
-                                {taskCounts[employee.id] > 0 && (
-                                    <div className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shadow-md animate-in zoom-in">
-                                        {taskCounts[employee.id]}
-                                    </div>
-                                )}
-                            </div>
-
-                            <h3 className="text-xl font-bold truncate w-full">{employee.name}</h3>
-
-
-                        </CardContent>
-                    </Card>
-                ))}
+                                <h3 className="text-xl font-bold truncate w-full">{employee.name}</h3>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
             </div>
         </div>
     );
