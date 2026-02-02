@@ -3,7 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Mic, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, ADMIN_EMPLOYEE_ID } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TaskType } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -15,6 +15,7 @@ export default function TaskForm() {
     const { id } = useParams();
     const { role } = useAuth();
     const canEditDetails = role === 'admin';
+    const isEmployee = role === 'employee';
     const [searchParams] = useSearchParams();
     const preAssignedEmployeeId = searchParams.get('employeeId');
     const isEditing = !!id;
@@ -27,8 +28,8 @@ export default function TaskForm() {
     const [formData, setFormData] = useState({
         title: '',
         description: '',
-        assignedTo: preAssignedEmployeeId || '',
-        type: 'routine' as TaskType,
+        assignedTo: isEmployee ? ADMIN_EMPLOYEE_ID : (preAssignedEmployeeId || ''),
+        type: isEmployee ? 'one_off' as TaskType : 'routine' as TaskType,
         dueDate: new Date().toISOString().split('T')[0], // Default to today
         recurrenceType: 'none',
         recurrenceDay: new Date().getDay(),
@@ -335,8 +336,8 @@ export default function TaskForm() {
                     </Card>
                 )}
 
-                {/* Details Side-by-Side */}
-                {canEditDetails && (
+                {/* Details Side-by-Side - Only for Admin */}
+                {canEditDetails && !isEmployee && (
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card>
                             <CardHeader>
@@ -623,7 +624,7 @@ export default function TaskForm() {
                     </Button>
                     <Button type="submit" size="lg" className="w-full sm:w-auto sm:px-8">
                         <Save className="mr-2 h-4 w-4" />
-                        {canEditDetails ? 'Salvar Tarefa' : 'Enviar Resposta'}
+                        {isEmployee ? 'Enviar para Administrador' : (canEditDetails ? 'Salvar Tarefa' : 'Enviar Resposta')}
                     </Button>
                 </div>
             </form >
