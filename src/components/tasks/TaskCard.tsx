@@ -1,8 +1,9 @@
-import { Calendar, CheckCircle2, Circle, Pencil, Trash2, Users } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Pencil, Trash2, Users, Volume2, VolumeX } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
 
 interface TaskCardProps {
     task: Task;
@@ -13,12 +14,45 @@ interface TaskCardProps {
 
 export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardProps) {
     const isCompleted = task.status === 'completed';
+    const [isPlaying, setIsPlaying] = useState(false);
 
     const handleToggle = () => {
         if (onStatusChange) {
             onStatusChange(task.id, isCompleted ? 'pending' : 'completed');
         }
     };
+
+    const handlePlayAudio = () => {
+        if (isPlaying) {
+            // Stop current speech
+            window.speechSynthesis.cancel();
+            setIsPlaying(false);
+        } else {
+            // Start text-to-speech
+            const textToRead = `${task.title}. ${task.description}`;
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 0.9; // Slightly slower for better comprehension
+
+            utterance.onend = () => {
+                setIsPlaying(false);
+            };
+
+            utterance.onerror = () => {
+                setIsPlaying(false);
+            };
+
+            window.speechSynthesis.speak(utterance);
+            setIsPlaying(true);
+        }
+    };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            window.speechSynthesis.cancel();
+        };
+    }, []);
 
     return (
         <Card className={cn("transition-all border-l-4 relative group", isCompleted ? "border-green-500 bg-green-50/50" : "border-gray-300")}>
@@ -79,6 +113,31 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
                             )}
                         </div>
                     </div>
+
+                    {/* Audio Button */}
+                    {task.description && task.description.trim() && (
+                        <div className="mt-2">
+                            <Button
+                                type="button"
+                                variant={isPlaying ? "default" : "outline"}
+                                size="sm"
+                                onClick={handlePlayAudio}
+                                className="flex items-center gap-2 h-8"
+                            >
+                                {isPlaying ? (
+                                    <>
+                                        <VolumeX className="h-4 w-4" />
+                                        <span className="text-xs">Parar Áudio</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Volume2 className="h-4 w-4" />
+                                        <span className="text-xs">Ouvir Descrição</span>
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    )}
 
                     {task.description && task.description.trim() !== task.title.trim() && (
                         <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
