@@ -15,6 +15,7 @@ interface TaskCardProps {
 export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardProps) {
     const isCompleted = task.status === 'completed';
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isPlayingResponse, setIsPlayingResponse] = useState(false);
 
     const handleToggle = () => {
         if (onStatusChange) {
@@ -44,6 +45,31 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
 
             window.speechSynthesis.speak(utterance);
             setIsPlaying(true);
+        }
+    };
+
+    const handlePlayResponseAudio = () => {
+        if (isPlayingResponse) {
+            // Stop current speech
+            window.speechSynthesis.cancel();
+            setIsPlayingResponse(false);
+        } else {
+            // Start text-to-speech for response
+            const textToRead = task.response || '';
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = 'pt-BR';
+            utterance.rate = 0.9; // Slightly slower for better comprehension
+
+            utterance.onend = () => {
+                setIsPlayingResponse(false);
+            };
+
+            utterance.onerror = () => {
+                setIsPlayingResponse(false);
+            };
+
+            window.speechSynthesis.speak(utterance);
+            setIsPlayingResponse(true);
         }
     };
 
@@ -146,9 +172,32 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
                     )}
 
                     {task.response && (
-                        <div className="mt-2 p-2 bg-secondary/30 rounded-md text-sm border-l-2 border-secondary">
+                        <div className="mt-2 p-2 bg-secondary/30 rounded-md text-sm border-l-2 border-secondary space-y-2">
                             <span className="font-medium text-xs block text-muted-foreground mb-0.5">Resposta:</span>
                             <p className="text-foreground">{task.response}</p>
+
+                            {/* Audio Button for Response */}
+                            <div className="pt-1">
+                                <Button
+                                    type="button"
+                                    variant={isPlayingResponse ? "default" : "outline"}
+                                    size="sm"
+                                    onClick={handlePlayResponseAudio}
+                                    className="flex items-center gap-2 h-7"
+                                >
+                                    {isPlayingResponse ? (
+                                        <>
+                                            <VolumeX className="h-3 w-3" />
+                                            <span className="text-xs">Parar Áudio</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Volume2 className="h-3 w-3" />
+                                            <span className="text-xs">Ouvir Resposta</span>
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                     )}
 
