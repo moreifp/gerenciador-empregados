@@ -1,13 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Mic, Square, Image as ImageIcon, X, Camera } from 'lucide-react';
+import { ArrowLeft, Save, Mic, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TaskType } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { Loading } from '@/components/ui/loading';
+import { PhotoSelector } from '@/components/ui/PhotoSelector';
 
 export default function TaskForm() {
     const navigate = useNavigate();
@@ -23,11 +24,6 @@ export default function TaskForm() {
     const [isRecordingResponse, setIsRecordingResponse] = useState(false);
     const recognitionRef = useRef<any>(null);
 
-    // Camera State
-    const [isCameraOpen, setIsCameraOpen] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const streamRef = useRef<MediaStream | null>(null);
-
     const [formData, setFormData] = useState({
         title: '',
         description: '',
@@ -38,7 +34,8 @@ export default function TaskForm() {
         recurrenceDay: new Date().getDay(),
         recurrenceDays: [] as number[], // For custom recurrence
         photoPreview: '' as string | null,
-        response: ''
+        response: '',
+        responsePhotoPreview: '' as string | null
     });
 
     const [employees, setEmployees] = useState<{ id: string, name: string, photo?: string, role?: string }[]>([]);
@@ -64,13 +61,6 @@ export default function TaskForm() {
             recognitionRef.current.interimResults = true;
             recognitionRef.current.lang = 'pt-BR';
         }
-
-        // Cleanup on unmount
-        return () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-            }
-        };
     }, [id, isEditing]);
 
     const fetchEmployees = async () => {
@@ -98,7 +88,8 @@ export default function TaskForm() {
                     recurrenceDay: data.recurrence_day || new Date().getDay(),
                     recurrenceDays: data.recurrence_days || [],
                     photoPreview: null, // Tasks don't have reference photos in current schema
-                    response: data.response || ''
+                    response: data.response || '',
+                    responsePhotoPreview: null // Response photos will be added to schema later
                 });
             }
         } catch (error) {
@@ -107,11 +98,6 @@ export default function TaskForm() {
         }
     };
 
-    useEffect(() => {
-        if (isCameraOpen && streamRef.current && videoRef.current) {
-            videoRef.current.srcObject = streamRef.current;
-        }
-    }, [isCameraOpen]);
 
     // Active recording target ref to handle closure issues
     const activeRecordingTarget = useRef<'description' | 'response' | null>(null);
@@ -177,53 +163,12 @@ export default function TaskForm() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, photoPreview: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
-        }
+    const handlePhotoChange = (photoData: string | null) => {
+        setFormData(prev => ({ ...prev, photoPreview: photoData }));
     };
 
-    const startCamera = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-            streamRef.current = stream;
-            setIsCameraOpen(true);
-        } catch (err) {
-            console.error('Error accessing camera:', err);
-            alert('Não foi possível acessar a câmera.');
-        }
-    };
-
-    const stopCamera = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
-            streamRef.current = null;
-        }
-        setIsCameraOpen(false);
-    };
-
-    const capturePhoto = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-                ctx.drawImage(videoRef.current, 0, 0);
-                const photoData = canvas.toDataURL('image/jpeg');
-                setFormData(prev => ({ ...prev, photoPreview: photoData }));
-                stopCamera();
-            }
-        }
-    };
-
-    const removePhoto = () => {
-        setFormData(prev => ({ ...prev, photoPreview: null }));
+    const handleResponsePhotoChange = (photoData: string | null) => {
+        setFormData(prev => ({ ...prev, responsePhotoPreview: photoData }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -371,59 +316,19 @@ export default function TaskForm() {
                             {/* Photo Upload & Camera */}
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
-
-                                {!formData.photoPreview && !isCameraOpen ? (
-                                    canEditDetails ? (
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {/* Upload Box */}
-                                            <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40">
-                                                <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                                                <p className="text-xs font-medium">Enviar Foto</p>
-                                                <Input
-                                                    type="file"
-                                                    accept="image/*"
-                                                    className="absolute inset-0 opacity-0 cursor-pointer"
-                                                    onChange={handlePhotoChange}
-                                                />
-                                            </div>
-
-                                            {/* Camera Box */}
-                                            <div
-                                                className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
-                                                onClick={startCamera}
-                                            >
-                                                <Camera className="h-8 w-8 mb-2 opacity-50" />
-                                                <p className="text-xs font-medium">Tirar Foto Agora</p>
-                                            </div>
+                                {canEditDetails ? (
+                                    <PhotoSelector
+                                        photoPreview={formData.photoPreview}
+                                        onPhotoChange={handlePhotoChange}
+                                    />
+                                ) : (
+                                    formData.photoPreview ? (
+                                        <div className="relative rounded-lg overflow-hidden border">
+                                            <img src={formData.photoPreview} alt="Preview" className="w-full h-64 object-cover" />
                                         </div>
                                     ) : (
                                         <p className="text-sm text-muted-foreground italic">Nenhuma foto de referência fornecida.</p>
                                     )
-                                ) : isCameraOpen ? (
-                                    <div className="relative rounded-lg overflow-hidden border bg-black">
-                                        <video ref={videoRef} autoPlay playsInline className="w-full h-64 object-cover"></video>
-                                        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
-                                            <Button variant="secondary" onClick={stopCamera} type="button">Cancelar</Button>
-                                            <Button onClick={capturePhoto} type="button" className="bg-white text-black hover:bg-gray-200">
-                                                <Camera className="mr-2 h-4 w-4" /> Capturar
-                                            </Button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="relative rounded-lg overflow-hidden border">
-                                        <img src={formData.photoPreview!} alt="Preview" className="w-full h-64 object-cover" />
-                                        {canEditDetails && (
-                                            <Button
-                                                type="button"
-                                                variant="destructive"
-                                                size="icon"
-                                                className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                                                onClick={removePhoto}
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </Button>
-                                        )}
-                                    </div>
                                 )}
                             </div>
                         </CardContent>
@@ -668,35 +573,46 @@ export default function TaskForm() {
                     <CardHeader className="pb-2">
                         <CardTitle>Resposta / Observações</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex justify-between items-center mb-2">
-                            <p className="text-sm text-muted-foreground">
-                            </p>
-                            <Button
-                                type="button"
-                                variant={isRecordingResponse ? "destructive" : "secondary"}
-                                size="sm"
-                                onClick={toggleRecordingResponse}
-                                className="flex items-center gap-2 animate-in fade-in shrink-0 ml-2"
-                            >
-                                {isRecordingResponse ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-                                {isRecordingResponse ? 'Parar' : 'Gravar'}
-                            </Button>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <p className="text-sm text-muted-foreground">
+                                </p>
+                                <Button
+                                    type="button"
+                                    variant={isRecordingResponse ? "destructive" : "secondary"}
+                                    size="sm"
+                                    onClick={toggleRecordingResponse}
+                                    className="flex items-center gap-2 animate-in fade-in shrink-0 ml-2"
+                                >
+                                    {isRecordingResponse ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                                    {isRecordingResponse ? 'Parar' : 'Gravar'}
+                                </Button>
+                            </div>
+                            <div className="relative">
+                                <textarea
+                                    name="response"
+                                    className={`flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isRecordingResponse ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                                    placeholder={isRecordingResponse ? "Ouvindo... pode falar..." : "Digite aqui qualquer observação sobre a tarefa..."}
+                                    value={formData.response}
+                                    onChange={handleChange}
+                                />
+                                {isRecordingResponse && (
+                                    <span className="absolute bottom-2 right-2 flex h-3 w-3">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
-                        <div className="relative">
-                            <textarea
-                                name="response"
-                                className={`flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isRecordingResponse ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                                placeholder={isRecordingResponse ? "Ouvindo... pode falar..." : "Digite aqui qualquer observação sobre a tarefa..."}
-                                value={formData.response}
-                                onChange={handleChange}
+
+                        {/* Photo for Response/Observations */}
+                        <div>
+                            <label className="text-sm font-medium mb-2 block">Foto da Observação</label>
+                            <PhotoSelector
+                                photoPreview={formData.responsePhotoPreview}
+                                onPhotoChange={handleResponsePhotoChange}
                             />
-                            {isRecordingResponse && (
-                                <span className="absolute bottom-2 right-2 flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                                </span>
-                            )}
                         </div>
                     </CardContent>
                 </Card>
