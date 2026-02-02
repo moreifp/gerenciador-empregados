@@ -24,11 +24,14 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         if (!text || disabled) return;
 
         // If already speaking, stop it
-        if (isSpeaking) {
+        if (isSpeaking || window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
             setIsSpeaking(false);
             return;
         }
+
+        // Cancel any existing speech to prevent double-play
+        window.speechSynthesis.cancel();
 
         // Create new utterance
         const utterance = new SpeechSynthesisUtterance(text);
