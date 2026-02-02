@@ -7,6 +7,32 @@ interface TextToSpeechProps {
     disabled?: boolean;
 }
 
+// Função para pontuar qualidade de vozes pt-BR
+function scoreVoice(voice: SpeechSynthesisVoice): number {
+    let score = 0;
+
+    // Idioma exato
+    if (voice.lang === 'pt-BR') score += 100;
+    else if (voice.lang.startsWith('pt')) score += 50;
+
+    const lowerName = voice.name.toLowerCase();
+
+    // Vozes premium conhecidas (Luciana, Francisca, Joana)
+    if (['luciana', 'francisca', 'joana'].some(name => lowerName.includes(name))) score += 80;
+
+    // Indicadores de qualidade no nome
+    if (lowerName.includes('premium') || lowerName.includes('enhanced')) score += 60;
+    if (lowerName.includes('neural') || lowerName.includes('wavenet')) score += 70;
+
+    // Vozes online geralmente têm melhor qualidade
+    if (!voice.localService) score += 30;
+
+    // Preferência por voz feminina (melhor clareza em português)
+    if (lowerName.includes('female')) score += 20;
+
+    return score;
+}
+
 export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -36,19 +62,36 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         // Create new utterance
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'pt-BR';
-        utterance.rate = 1.0; // Normal speed
+        utterance.rate = 0.9; // Ligeiramente mais lento para melhor compreensão
         utterance.pitch = 1.0;
+        utterance.volume = 1.0;
 
-        // Explicitly try to find a Brazilian Portuguese voice
+        // Seleção inteligente de voz com cache
         const voices = window.speechSynthesis.getVoices();
-        const ptBRVoice = voices.find(voice =>
-            voice.lang === 'pt-BR' ||
-            (voice.lang.includes('pt') && voice.name.includes('Brasil')) ||
-            (voice.lang.includes('pt') && voice.name.includes('Brazil'))
-        );
+        const ptVoices = voices.filter(voice => voice.lang.startsWith('pt'));
 
-        if (ptBRVoice) {
-            utterance.voice = ptBRVoice;
+        // Verificar se há voz salva em cache
+        const savedVoiceName = localStorage.getItem('preferred-tts-voice');
+        let bestVoice: SpeechSynthesisVoice | undefined;
+
+        if (savedVoiceName) {
+            bestVoice = ptVoices.find(v => v.name === savedVoiceName);
+        }
+
+        // Se não encontrou voz salva, selecionar melhor disponível
+        if (!bestVoice && ptVoices.length > 0) {
+            // Ordenar por score e pegar a melhor
+            ptVoices.sort((a, b) => scoreVoice(b) - scoreVoice(a));
+            bestVoice = ptVoices[0];
+
+            // Salvar para próximas vezes
+            localStorage.setItem('preferred-tts-voice', bestVoice.name);
+
+            console.log('Selected best voice:', bestVoice.name, 'Score:', scoreVoice(bestVoice));
+        }
+
+        if (bestVoice) {
+            utterance.voice = bestVoice;
         }
 
         utterance.onstart = () => {
