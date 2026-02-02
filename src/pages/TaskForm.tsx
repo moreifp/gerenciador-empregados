@@ -9,6 +9,7 @@ import { TaskType } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { Loading } from '@/components/ui/loading';
 import { PhotoSelector } from '@/components/ui/PhotoSelector';
+import { TextToSpeech } from '@/components/ui/TextToSpeech';
 
 export default function TaskForm() {
     const navigate = useNavigate();
@@ -282,19 +283,22 @@ export default function TaskForm() {
                         <CardContent className="space-y-6">
                             {/* Description & Audio */}
                             <div>
-                                <div className="flex justify-between items-center mb-2">
+                                <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
                                     <label className="text-sm font-medium">Descrição / Instruções</label>
-                                    <Button
-                                        type="button"
-                                        variant={isRecording ? "destructive" : "secondary"}
-                                        size="sm"
-                                        onClick={toggleRecording}
-                                        disabled={!canEditDetails}
-                                        className="flex items-center gap-2 animate-in fade-in"
-                                    >
-                                        {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-                                        {isRecording ? 'Parar Gravação' : 'Gravar Áudio'}
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        <TextToSpeech text={formData.description} />
+                                        <Button
+                                            type="button"
+                                            variant={isRecording ? "destructive" : "secondary"}
+                                            size="sm"
+                                            onClick={toggleRecording}
+                                            disabled={!canEditDetails}
+                                            className="flex items-center gap-2 animate-in fade-in"
+                                        >
+                                            {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                                            {isRecording ? 'Parar Gravação' : 'Gravar Áudio'}
+                                        </Button>
+                                    </div>
                                 </div>
                                 <div className="relative">
                                     <textarea
@@ -576,19 +580,22 @@ export default function TaskForm() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div>
-                            <div className="flex justify-between items-center mb-2">
+                            <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
                                 <p className="text-sm text-muted-foreground">
                                 </p>
-                                <Button
-                                    type="button"
-                                    variant={isRecordingResponse ? "destructive" : "secondary"}
-                                    size="sm"
-                                    onClick={toggleRecordingResponse}
-                                    className="flex items-center gap-2 animate-in fade-in shrink-0 ml-2"
-                                >
-                                    {isRecordingResponse ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
-                                    {isRecordingResponse ? 'Parar' : 'Gravar'}
-                                </Button>
+                                <div className="flex gap-2">
+                                    <TextToSpeech text={formData.response} />
+                                    <Button
+                                        type="button"
+                                        variant={isRecordingResponse ? "destructive" : "secondary"}
+                                        size="sm"
+                                        onClick={toggleRecordingResponse}
+                                        className="flex items-center gap-2 animate-in fade-in shrink-0"
+                                    >
+                                        {isRecordingResponse ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
+                                        {isRecordingResponse ? 'Parar' : 'Gravar'}
+                                    </Button>
+                                </div>
                             </div>
                             <div className="relative">
                                 <textarea
