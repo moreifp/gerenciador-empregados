@@ -181,7 +181,7 @@ export default function Tasks() {
     };
 
     const isEmployeeView = role === 'employee';
-    const canCreateTask = role === 'admin'; // Only admin can create tasks
+    const canCreateTask = role === 'admin' || role === 'employee'; // Admin and employees can create tasks
     const canEditTask = role === 'admin'; // Only admin can edit tasks
     const canDeleteTask = role === 'admin'; // Only admin can delete tasks
 
@@ -345,6 +345,12 @@ export default function Tasks() {
                             </Button>
                         </div>
                     </div>
+                    <Button
+                        onClick={() => navigate('/tasks/new')}
+                        size="sm"
+                    >
+                        <Plus className="mr-2 h-4 w-4" /> Nova Tarefa para Admin
+                    </Button>
                 </div>
 
                 {isChangingPassword && (
