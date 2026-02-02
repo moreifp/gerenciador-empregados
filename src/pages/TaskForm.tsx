@@ -45,6 +45,10 @@ export default function TaskForm() {
     const [selectionMode, setSelectionMode] = useState<'single' | 'multiple' | 'all'>('single');
     const [loading, setLoading] = useState(true);
 
+    // Detectar se a tarefa é para o admin
+    const isTaskForAdmin = formData.assignedTo === ADMIN_EMPLOYEE_ID ||
+                           (selectionMode === 'single' && selectedEmployees.has(ADMIN_EMPLOYEE_ID));
+
     useEffect(() => {
         const init = async () => {
             await fetchEmployees();
@@ -341,7 +345,7 @@ export default function TaskForm() {
                 )}
 
                 {/* Details Side-by-Side - Only for Admin */}
-                {canEditDetails && !isEmployee && (
+                {canEditDetails && !isEmployee && !isTaskForAdmin && (
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card>
                             <CardHeader>
