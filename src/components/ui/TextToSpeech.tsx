@@ -39,6 +39,18 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         utterance.rate = 1.0; // Normal speed
         utterance.pitch = 1.0;
 
+        // Explicitly try to find a Brazilian Portuguese voice
+        const voices = window.speechSynthesis.getVoices();
+        const ptBRVoice = voices.find(voice =>
+            voice.lang === 'pt-BR' ||
+            (voice.lang.includes('pt') && voice.name.includes('Brasil')) ||
+            (voice.lang.includes('pt') && voice.name.includes('Brazil'))
+        );
+
+        if (ptBRVoice) {
+            utterance.voice = ptBRVoice;
+        }
+
         utterance.onstart = () => {
             setIsSpeaking(true);
         };
@@ -55,6 +67,18 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
     };
+
+    // Ensure voices are loaded (needed for some browsers like Chrome)
+    useEffect(() => {
+        const loadVoices = () => {
+            window.speechSynthesis.getVoices();
+        };
+
+        loadVoices();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = loadVoices;
+        }
+    }, []);
 
     // Don't render if no text or speechSynthesis not supported
     if (!text || !window.speechSynthesis) return null;
