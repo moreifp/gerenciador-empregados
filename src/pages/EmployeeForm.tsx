@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Image as ImageIcon, X } from 'lucide-react';
+import { ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabase';
 import { Loading } from '@/components/ui/loading';
+import { PhotoSelector } from '@/components/ui/PhotoSelector';
 
 export default function EmployeeForm() {
     const navigate = useNavigate();
@@ -58,19 +59,8 @@ export default function EmployeeForm() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setFormData(prev => ({ ...prev, photoPreview: reader.result as string }));
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const removePhoto = () => {
-        setFormData(prev => ({ ...prev, photoPreview: null }));
+    const handlePhotoChange = (photoData: string | null) => {
+        setFormData(prev => ({ ...prev, photoPreview: photoData }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -156,35 +146,10 @@ export default function EmployeeForm() {
                             {/* Photo Upload */}
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Foto do Funcionário</label>
-
-                                {formData.photoPreview ? (
-                                    <div className="relative rounded-lg overflow-hidden border w-full max-w-xs mx-auto">
-                                        <img src={formData.photoPreview} alt="Preview" className="w-full h-64 object-cover" />
-                                        <Button
-                                            type="button"
-                                            variant="destructive"
-                                            size="icon"
-                                            className="absolute top-2 right-2 h-8 w-8 rounded-full"
-                                            onClick={removePhoto}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <div className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-48 bg-muted/10">
-                                        <ImageIcon className="h-10 w-10 mb-3 opacity-50" />
-                                        <p className="font-medium">Adicionar Foto</p>
-                                        <p className="text-xs text-muted-foreground mt-1 text-center">
-                                            Clique para escolher um arquivo ou tirar uma foto
-                                        </p>
-                                        <Input
-                                            type="file"
-                                            accept="image/*"
-                                            className="absolute inset-0 opacity-0 cursor-pointer h-full w-full"
-                                            onChange={handlePhotoChange}
-                                        />
-                                    </div>
-                                )}
+                                <PhotoSelector
+                                    photoPreview={formData.photoPreview}
+                                    onPhotoChange={handlePhotoChange}
+                                />
                             </div>
                         </CardContent>
                     </Card>
