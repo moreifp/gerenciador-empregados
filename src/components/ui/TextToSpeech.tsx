@@ -17,8 +17,23 @@ function scoreVoice(voice: SpeechSynthesisVoice): number {
 
     const lowerName = voice.name.toLowerCase();
 
-    // Vozes premium conhecidas (Luciana, Francisca, Joana)
-    if (['luciana', 'francisca', 'joana'].some(name => lowerName.includes(name))) score += 80;
+    // Vozes femininas premium conhecidas (prioridade máxima)
+    if (['luciana', 'francisca', 'joana', 'fernanda', 'monica', 'marcia'].some(name => lowerName.includes(name))) {
+        score += 150;
+    }
+
+    // Forte preferência por vozes femininas (melhor naturalidade em pt-BR)
+    if (lowerName.includes('female') || lowerName.includes('feminina') || lowerName.includes('mulher')) {
+        score += 100;
+    }
+
+    // Penalizar vozes masculinas
+    if (lowerName.includes('male') && !lowerName.includes('female')) {
+        score -= 50;
+    }
+    if (lowerName.includes('masculino') || lowerName.includes('homem')) {
+        score -= 50;
+    }
 
     // Indicadores de qualidade no nome
     if (lowerName.includes('premium') || lowerName.includes('enhanced')) score += 60;
@@ -26,9 +41,6 @@ function scoreVoice(voice: SpeechSynthesisVoice): number {
 
     // Vozes online geralmente têm melhor qualidade
     if (!voice.localService) score += 30;
-
-    // Preferência por voz feminina (melhor clareza em português)
-    if (lowerName.includes('female')) score += 20;
 
     return score;
 }
@@ -80,24 +92,33 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         const voices = window.speechSynthesis.getVoices();
         const ptVoices = voices.filter(voice => voice.lang.startsWith('pt'));
 
-        // Verificar se há voz salva em cache
-        const savedVoiceName = localStorage.getItem('preferred-tts-voice');
+        // Filtrar apenas vozes femininas se houver disponíveis
+        const femaleVoices = ptVoices.filter(voice => {
+            const lowerName = voice.name.toLowerCase();
+            return (
+                lowerName.includes('female') ||
+                lowerName.includes('feminina') ||
+                lowerName.includes('mulher') ||
+                ['luciana', 'francisca', 'joana', 'fernanda', 'monica', 'marcia'].some(name => lowerName.includes(name)) ||
+                (!lowerName.includes('male') && !lowerName.includes('masculino'))
+            );
+        });
+
+        // Usar vozes femininas se houver, caso contrário usar todas
+        const voicesToConsider = femaleVoices.length > 0 ? femaleVoices : ptVoices;
+
+        // Forçar nova seleção (ignorar cache para garantir melhor voz feminina)
         let bestVoice: SpeechSynthesisVoice | undefined;
 
-        if (savedVoiceName) {
-            bestVoice = ptVoices.find(v => v.name === savedVoiceName);
-        }
-
-        // Se não encontrou voz salva, selecionar melhor disponível
-        if (!bestVoice && ptVoices.length > 0) {
+        if (voicesToConsider.length > 0) {
             // Ordenar por score e pegar a melhor
-            ptVoices.sort((a, b) => scoreVoice(b) - scoreVoice(a));
-            bestVoice = ptVoices[0];
+            voicesToConsider.sort((a, b) => scoreVoice(b) - scoreVoice(a));
+            bestVoice = voicesToConsider[0];
 
             // Salvar para próximas vezes
             localStorage.setItem('preferred-tts-voice', bestVoice.name);
 
-            console.log('Selected best voice:', bestVoice.name, 'Score:', scoreVoice(bestVoice));
+            console.log('Selected best voice:', bestVoice.name, 'Score:', scoreVoice(bestVoice), 'Female voices available:', femaleVoices.length);
         }
 
         if (bestVoice) {
