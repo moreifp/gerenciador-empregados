@@ -110,6 +110,28 @@ export default function Tasks() {
         navigate(`/tasks/${taskId}`);
     };
 
+    const handleDelete = async (taskId: string) => {
+        if (!window.confirm('Tem certeza que deseja deletar esta tarefa? Esta ação não pode ser desfeita.')) {
+            return;
+        }
+
+        try {
+            // Delete task assignees first (if any)
+            await supabase.from('task_assignees').delete().eq('task_id', taskId);
+
+            // Delete the task
+            const { error } = await supabase.from('tasks').delete().eq('id', taskId);
+
+            if (error) throw error;
+
+            // Update local state
+            setBaseTasks(prev => prev.filter(t => t.id !== taskId));
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            alert('Erro ao deletar tarefa.');
+        }
+    };
+
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
@@ -145,6 +167,7 @@ export default function Tasks() {
     const isEmployeeView = role === 'employee';
     const canCreateTask = role === 'admin'; // Only admin can create tasks
     const canEditTask = role === 'admin'; // Only admin can edit tasks
+    const canDeleteTask = role === 'admin'; // Only admin can delete tasks
 
     // Get task count per employee
     const getEmployeeTaskCount = (empId: string) => {
@@ -258,6 +281,7 @@ export default function Tasks() {
                                 task={task}
                                 onStatusChange={handleStatusChange}
                                 onEdit={canEditTask ? handleEdit : undefined}
+                                onDelete={canDeleteTask ? handleDelete : undefined}
                             />
                         ))
                     )}
@@ -377,6 +401,7 @@ export default function Tasks() {
                             task={task}
                             onStatusChange={handleStatusChange}
                             onEdit={handleEdit}
+                            onDelete={handleDelete}
                         />
                     ))}
                     {tasks.length === 0 && (
