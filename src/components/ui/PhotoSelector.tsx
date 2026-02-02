@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, Image as ImageIcon, X } from 'lucide-react';
 import { Button } from './button';
-import { Input } from './input';
 
 interface PhotoSelectorProps {
     photoPreview: string | null;
@@ -41,6 +40,10 @@ export function PhotoSelector({ photoPreview, onPhotoChange, disabled = false }:
             reader.readAsDataURL(file);
         }
         setShowOptions(false);
+    };
+
+    const openGallery = () => {
+        fileInputRef.current?.click();
     };
 
     const startCamera = async () => {
@@ -124,38 +127,46 @@ export function PhotoSelector({ photoPreview, onPhotoChange, disabled = false }:
         );
     }
 
-    // Show selection options
+    // Show selection options modal
     if (showOptions && !disabled) {
         return (
-            <div className="space-y-3">
+            <div className="space-y-4 p-4 border-2 rounded-lg bg-background">
                 <div className="text-center">
-                    <p className="text-sm font-medium mb-3">Escolha como adicionar a foto:</p>
+                    <p className="text-sm font-semibold mb-4">Como deseja adicionar a foto?</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Upload from Gallery */}
-                    <div
-                        className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <ImageIcon className="h-8 w-8 mb-2 opacity-50" />
-                        <p className="text-xs font-medium">Escolher da Galeria</p>
-                        <Input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleFileSelect}
-                        />
-                    </div>
-
-                    {/* Take Photo with Camera */}
-                    <div
-                        className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-40"
+                <div className="grid grid-cols-1 gap-3">
+                    {/* Camera Button */}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
                         onClick={startCamera}
+                        className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-accent"
                     >
-                        <Camera className="h-8 w-8 mb-2 opacity-50" />
-                        <p className="text-xs font-medium">Tirar Foto Agora</p>
-                    </div>
+                        <Camera className="h-6 w-6" />
+                        <span className="text-sm font-medium">Tirar Foto Agora</span>
+                    </Button>
+
+                    {/* Gallery Button */}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="lg"
+                        onClick={openGallery}
+                        className="w-full h-20 flex flex-col items-center justify-center gap-2 hover:bg-accent"
+                    >
+                        <ImageIcon className="h-6 w-6" />
+                        <span className="text-sm font-medium">Escolher da Galeria</span>
+                    </Button>
+
+                    {/* Hidden file input */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleFileSelect}
+                    />
                 </div>
                 <div className="text-center">
                     <Button
@@ -163,6 +174,7 @@ export function PhotoSelector({ photoPreview, onPhotoChange, disabled = false }:
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowOptions(false)}
+                        className="w-full"
                     >
                         Cancelar
                     </Button>
@@ -171,17 +183,23 @@ export function PhotoSelector({ photoPreview, onPhotoChange, disabled = false }:
         );
     }
 
-    // Initial state - show "Add Photo" button
+    // Initial state - show single \"Add Photo\" button
     return (
-        <div
-            className="border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-accent/50 transition-colors cursor-pointer relative h-48 bg-muted/10"
+        <Button
+            type="button"
+            variant="outline"
+            size="lg"
             onClick={() => !disabled && setShowOptions(true)}
+            disabled={disabled}
+            className="w-full h-32 flex flex-col items-center justify-center gap-3 border-2 border-dashed hover:bg-accent/50 transition-colors"
         >
-            <ImageIcon className="h-10 w-10 mb-3 opacity-50" />
-            <p className="font-medium">Adicionar Foto</p>
-            <p className="text-xs text-muted-foreground mt-1 text-center">
-                Clique para escolher da galeria ou tirar uma foto
-            </p>
-        </div>
+            <ImageIcon className="h-10 w-10 opacity-50" />
+            <div className="flex flex-col items-center">
+                <span className="font-semibold">Adicionar Foto</span>
+                <span className="text-xs text-muted-foreground mt-1">
+                    Toque para escolher
+                </span>
+            </div>
+        </Button>
     );
 }
