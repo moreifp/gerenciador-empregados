@@ -36,6 +36,7 @@ function scoreVoice(voice: SpeechSynthesisVoice): number {
 export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const isProcessingRef = useRef(false);
 
     useEffect(() => {
         // Cleanup on unmount
@@ -53,8 +54,17 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         if (isSpeaking || window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
             setIsSpeaking(false);
+            isProcessingRef.current = false;
             return;
         }
+
+        // Prevent double-play: check if already processing
+        if (isProcessingRef.current) {
+            return;
+        }
+
+        // Mark as processing to prevent duplicate calls
+        isProcessingRef.current = true;
 
         // Cancel any existing speech to prevent double-play
         window.speechSynthesis.cancel();
@@ -96,14 +106,17 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
 
         utterance.onstart = () => {
             setIsSpeaking(true);
+            isProcessingRef.current = false;
         };
 
         utterance.onend = () => {
             setIsSpeaking(false);
+            isProcessingRef.current = false;
         };
 
         utterance.onerror = () => {
             setIsSpeaking(false);
+            isProcessingRef.current = false;
             console.error('Erro ao reproduzir áudio');
         };
 
