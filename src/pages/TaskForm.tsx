@@ -178,6 +178,12 @@ export default function TaskForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        // Validate description is required
+        if (!formData.description.trim()) {
+            alert('A descrição da tarefa é obrigatória.');
+            return;
+        }
+
         // Validate multiple selection mode
         if (selectionMode === 'multiple' && selectedEmployees.size < 2) {
             alert('No modo "Vários", você deve selecionar pelo menos 2 funcionários.');

@@ -16,8 +16,7 @@ create table if not exists public.employees (
 -- 2. Table: Tasks
 create table if not exists public.tasks (
   id uuid default gen_random_uuid() primary key,
-  title text not null,
-  description text,
+  description text not null,
   assigned_to uuid references public.employees(id),
   is_shared boolean default false,
   status text check (status in ('pending', 'in_progress', 'blocked', 'completed')) default 'pending',
@@ -61,10 +60,15 @@ begin
   if exists (select 1 from pg_constraint where conname = 'tasks_recurrence_type_check') then
     alter table public.tasks drop constraint tasks_recurrence_type_check;
   end if;
-  
+
   -- Re-add constraint with 'custom'
-  alter table public.tasks add constraint tasks_recurrence_type_check 
+  alter table public.tasks add constraint tasks_recurrence_type_check
     check (recurrence_type in ('none', 'daily', 'weekly', 'monthly', 'custom'));
+
+  -- Add created_by column if it doesn't exist
+  if not exists (select 1 from information_schema.columns where table_name = 'tasks' and column_name = 'created_by') then
+    alter table public.tasks add column created_by uuid references public.employees(id);
+  end if;
 
 end $$;
 

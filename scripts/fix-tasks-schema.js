@@ -32,64 +32,71 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function checkColumnExists() {
-    console.log('\n🔍 Verificando se coluna "title" existe na tabela tasks...\n');
+async function checkTableStructure() {
+    console.log('\n🔍 Verificando estrutura da tabela tasks...\n');
 
-    // Tentar fazer SELECT incluindo a coluna title
+    // Tentar fazer SELECT das colunas principais
     const { data, error } = await supabase
         .from('tasks')
-        .select('id, title, description')
+        .select('id, description, status, type')
         .limit(1);
 
     if (error) {
-        if (error.message.includes('column') && error.message.includes('title')) {
-            console.log('❌ Coluna "title" NÃO existe na tabela tasks');
-            console.log('   Erro:', error.message);
-            return false;
-        }
-        console.log('⚠️  Erro ao verificar tabela:', error.message);
-        return null;
+        console.log('❌ Erro ao verificar tabela:', error.message);
+        return false;
     }
 
-    console.log('✅ Coluna "title" existe na tabela tasks');
+    console.log('✅ Estrutura básica da tabela tasks está OK');
     return true;
 }
 
-async function addTitleColumn() {
-    console.log('\n🔧 Tentando adicionar coluna "title" à tabela tasks...\n');
+async function checkRequiredColumns() {
+    console.log('\n🔍 Verificando colunas necessárias...\n');
 
-    // Nota: A API do Supabase não permite executar DDL diretamente via REST API
-    // Precisamos usar SQL Editor no dashboard ou service_role key
+    const columnsToCheck = ['created_by', 'response', 'recurrence_days', 'is_shared'];
+    const missingColumns = [];
 
-    console.log('📝 SQL necessário para executar no Supabase Dashboard (SQL Editor):');
-    console.log('');
-    console.log('```sql');
-    console.log('-- Adicionar coluna title com valor padrão');
-    console.log('ALTER TABLE tasks');
-    console.log('ADD COLUMN IF NOT EXISTS title text DEFAULT \'Nova Tarefa\';');
-    console.log('');
-    console.log('-- Tornar NOT NULL após garantir valores');
-    console.log('ALTER TABLE tasks');
-    console.log('ALTER COLUMN title SET NOT NULL;');
-    console.log('');
-    console.log('-- Preencher titles com description onde estiverem vazios');
-    console.log('UPDATE tasks');
-    console.log('SET title = COALESCE(description, \'Tarefa sem descrição\')');
-    console.log('WHERE title IS NULL OR title = \'\';');
-    console.log('```');
-    console.log('');
-    console.log('⚠️  INSTRUÇÕES:');
-    console.log('1. Acesse: https://mprvslcxtbtiaevvpepg.supabase.co/project/_/sql/new');
-    console.log('2. Cole o SQL acima');
-    console.log('3. Clique em "Run"');
-    console.log('4. Execute este script novamente para verificar');
+    for (const column of columnsToCheck) {
+        const { error } = await supabase
+            .from('tasks')
+            .select(column)
+            .limit(1);
+
+        if (error && error.message.includes('column')) {
+            console.log(`❌ Coluna "${column}" NÃO existe`);
+            missingColumns.push(column);
+        } else {
+            console.log(`✅ Coluna "${column}" existe`);
+        }
+    }
+
+    if (missingColumns.length > 0) {
+        console.log('\n📝 SQL para adicionar colunas faltantes (executar no Supabase Dashboard):');
+        console.log('');
+        console.log('```sql');
+        if (missingColumns.includes('created_by')) {
+            console.log('ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS created_by uuid REFERENCES public.employees(id);');
+        }
+        if (missingColumns.includes('response')) {
+            console.log('ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS response text;');
+        }
+        if (missingColumns.includes('recurrence_days')) {
+            console.log('ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS recurrence_days integer[];');
+        }
+        if (missingColumns.includes('is_shared')) {
+            console.log('ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS is_shared boolean DEFAULT false;');
+        }
+        console.log('```');
+        return false;
+    }
+
+    return true;
 }
 
 async function testInsert() {
     console.log('\n🧪 Testando inserção de task...\n');
 
     const testTask = {
-        title: 'Teste de Criação',
         description: 'Task de teste para verificar se o sistema está funcionando',
         status: 'pending',
         type: 'one_off',
@@ -130,43 +137,44 @@ async function main() {
     console.log('   Script de Diagnóstico e Correção - Tabela Tasks');
     console.log('═══════════════════════════════════════════════════════════');
 
-    const columnExists = await checkColumnExists();
+    const structureOk = await checkTableStructure();
 
-    if (columnExists === false) {
-        await addTitleColumn();
+    if (!structureOk) {
+        console.log('\n❌ Não foi possível verificar a estrutura da tabela.');
+        console.log('   Verifique as permissões e a conexão com o Supabase.');
+        process.exit(1);
+    }
+
+    const columnsOk = await checkRequiredColumns();
+
+    if (!columnsOk) {
         console.log('\n⚠️  Execute o SQL no Supabase Dashboard e rode este script novamente.');
         process.exit(1);
-    } else if (columnExists === true) {
-        console.log('\n✅ Estrutura da tabela parece estar correta.');
+    }
 
-        const insertWorks = await testInsert();
+    const insertWorks = await testInsert();
 
-        if (insertWorks) {
-            console.log('\n═══════════════════════════════════════════════════════════');
-            console.log('✅ Sistema de criação de tasks está FUNCIONANDO!');
-            console.log('═══════════════════════════════════════════════════════════\n');
-            process.exit(0);
-        } else {
-            console.log('\n═══════════════════════════════════════════════════════════');
-            console.log('❌ Sistema de criação de tasks NÃO está funcionando');
-            console.log('   Pode ser um problema de RLS (Row Level Security)');
-            console.log('═══════════════════════════════════════════════════════════\n');
-
-            console.log('📝 SQL para verificar/corrigir RLS policies:');
-            console.log('');
-            console.log('```sql');
-            console.log('-- Ver políticas ativas');
-            console.log('SELECT * FROM pg_policies WHERE tablename = \'tasks\';');
-            console.log('');
-            console.log('-- Garantir permissões (se necessário)');
-            console.log('DROP POLICY IF EXISTS "Allow all access to tasks" ON tasks;');
-            console.log('CREATE POLICY "Allow all access to tasks" ON tasks FOR ALL USING (true) WITH CHECK (true);');
-            console.log('```');
-            process.exit(1);
-        }
+    if (insertWorks) {
+        console.log('\n═══════════════════════════════════════════════════════════');
+        console.log('✅ Sistema de criação de tasks está FUNCIONANDO!');
+        console.log('═══════════════════════════════════════════════════════════\n');
+        process.exit(0);
     } else {
-        console.log('\n❌ Não foi possível determinar o estado da tabela.');
-        console.log('   Verifique as permissões e a conexão com o Supabase.');
+        console.log('\n═══════════════════════════════════════════════════════════');
+        console.log('❌ Sistema de criação de tasks NÃO está funcionando');
+        console.log('   Pode ser um problema de RLS (Row Level Security)');
+        console.log('═══════════════════════════════════════════════════════════\n');
+
+        console.log('📝 SQL para verificar/corrigir RLS policies:');
+        console.log('');
+        console.log('```sql');
+        console.log('-- Ver políticas ativas');
+        console.log('SELECT * FROM pg_policies WHERE tablename = \'tasks\';');
+        console.log('');
+        console.log('-- Garantir permissões (se necessário)');
+        console.log('DROP POLICY IF EXISTS "Allow all access to tasks" ON tasks;');
+        console.log('CREATE POLICY "Allow all access to tasks" ON tasks FOR ALL USING (true) WITH CHECK (true);');
+        console.log('```');
         process.exit(1);
     }
 }
