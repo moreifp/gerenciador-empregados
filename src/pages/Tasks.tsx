@@ -147,6 +147,24 @@ export default function Tasks() {
         }
     };
 
+
+    const handleSaveResponse = async (taskId: string, response: string) => {
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({ response })
+                .eq('id', taskId);
+
+            if (error) throw error;
+
+            // Update local state
+            setBaseTasks(prev => prev.map(t => t.id === taskId ? { ...t, response } : t));
+        } catch (error) {
+            console.error('Error saving response:', error);
+            alert('Erro ao salvar resposta.');
+        }
+    };
+
     const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) return;
@@ -421,6 +439,7 @@ export default function Tasks() {
                             onStatusChange={handleStatusChange}
                             onEdit={handleEdit}
                             onDelete={handleDelete}
+                            onSaveResponse={canEditTask ? handleSaveResponse : undefined}
                         />
                     ))}
                     {tasks.length === 0 && (

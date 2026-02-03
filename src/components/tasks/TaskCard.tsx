@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle2, Circle, Pencil, Trash2, Users, Volume2, VolumeX, Send } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Pencil, Trash2, Users, Volume2, VolumeX, Send, MessageSquare } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -10,12 +10,16 @@ interface TaskCardProps {
     onStatusChange?: (id: string, newStatus: TaskStatus) => void;
     onEdit?: (taskId: string) => void;
     onDelete?: (taskId: string) => void;
+    onSaveResponse?: (taskId: string, response: string) => Promise<void>;
 }
 
-export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardProps) {
+export function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveResponse }: TaskCardProps) {
     const isCompleted = task.status === 'completed';
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPlayingResponse, setIsPlayingResponse] = useState(false);
+    const [isReplying, setIsReplying] = useState(false);
+    const [replyText, setReplyText] = useState('');
+    const [isSendingResponse, setIsSendingResponse] = useState(false);
 
     const handleToggle = () => {
         if (onStatusChange) {
@@ -152,7 +156,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
 
                     {/* Audio Button */}
                     {task.description && task.description.trim() && (
-                        <div className="mt-2">
+                        <div className="mt-2 flex flex-wrap gap-2">
                             <Button
                                 type="button"
                                 variant={isPlaying ? "default" : "outline"}
@@ -172,6 +176,60 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
                                     </>
                                 )}
                             </Button>
+
+                            {/* Reply Button - Only show if callback provided and no response yet (or explicitly wanted) */}
+                            {onSaveResponse && !task.response && !isReplying && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsReplying(true)}
+                                    className="flex items-center gap-2 h-8"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                    <span className="text-xs">Responder</span>
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Reply Form */}
+                    {isReplying && (
+                        <div className="mt-3 space-y-2 p-3 bg-slate-50 rounded-md border animate-in fade-in slide-in-from-top-2">
+                            <label className="text-xs font-medium text-muted-foreground">Sua resposta:</label>
+                            <textarea
+                                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-[80px]"
+                                placeholder="Digite uma resposta ou observação para quem criou a tarefa..."
+                                value={replyText}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                autoFocus
+                            />
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => setIsReplying(false)}
+                                    disabled={isSendingResponse}
+                                >
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                        if (!replyText.trim()) return;
+                                        setIsSendingResponse(true);
+                                        if (onSaveResponse) {
+                                            await onSaveResponse(task.id, replyText);
+                                            setIsReplying(false);
+                                            setReplyText('');
+                                        }
+                                        setIsSendingResponse(false);
+                                    }}
+                                    disabled={!replyText.trim() || isSendingResponse}
+                                >
+                                    {isSendingResponse ? 'Enviando...' : 'Enviar Resposta'}
+                                </Button>
+                            </div>
                         </div>
                     )}
 
