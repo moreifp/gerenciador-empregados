@@ -25,7 +25,6 @@ export type TaskType = 'routine' | 'one_off';
 
 export interface Task {
     id: string;
-    title: string;
     description: string;
     assignedTo?: string; // Employee ID - optional for shared tasks
     isShared?: boolean; // True if task is for all employees

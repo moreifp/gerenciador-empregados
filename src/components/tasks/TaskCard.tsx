@@ -30,7 +30,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
             setIsPlaying(false);
         } else {
             // Start text-to-speech
-            const textToRead = `${task.title}. ${task.description}`;
+            const textToRead = task.description;
             const utterance = new SpeechSynthesisUtterance(textToRead);
             utterance.lang = 'pt-BR';
             utterance.rate = 0.9; // Slightly slower for better comprehension
@@ -125,9 +125,9 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
 
                 <div className="space-y-2 flex-1 min-w-0">
                     <div>
-                        <h4 className={cn("font-semibold text-base leading-tight", isCompleted && "text-muted-foreground line-through")}>
-                            {task.title}
-                        </h4>
+                        <p className={cn("font-medium text-base leading-tight", isCompleted && "text-muted-foreground line-through")}>
+                            {task.description}
+                        </p>
                         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
                             <Calendar className="h-3 w-3" />
                             <span>{new Date(task.dueDate).toLocaleDateString()}</span>
@@ -163,12 +163,6 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
                                 )}
                             </Button>
                         </div>
-                    )}
-
-                    {task.description && task.description.trim() !== task.title.trim() && (
-                        <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                            {task.description}
-                        </p>
                     )}
 
                     {task.response && (

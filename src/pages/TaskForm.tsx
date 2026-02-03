@@ -27,7 +27,6 @@ export default function TaskForm() {
     const recognitionRef = useRef<any>(null);
 
     const [formData, setFormData] = useState({
-        title: '',
         description: '',
         assignedTo: isEmployee ? ADMIN_EMPLOYEE_ID : (preAssignedEmployeeId || ''),
         type: isEmployee ? 'one_off' as TaskType : 'routine' as TaskType,
@@ -85,7 +84,6 @@ export default function TaskForm() {
             if (error) throw error;
             if (data) {
                 setFormData({
-                    title: data.title || '',
                     description: data.description || '',
                     assignedTo: data.assigned_to || '',
                     type: data.type || 'routine',
@@ -180,11 +178,6 @@ export default function TaskForm() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Auto-generate title if empty from description
-        const finalTitle = formData.title || (formData.description.length > 50
-            ? formData.description.substring(0, 50) + '...'
-            : formData.description) || 'Nova Tarefa';
-
         // Validate multiple selection mode
         if (selectionMode === 'multiple' && selectedEmployees.size < 2) {
             alert('No modo "Vários", você deve selecionar pelo menos 2 funcionários.');
@@ -195,7 +188,6 @@ export default function TaskForm() {
         const isMultiAssignee = selectionMode === 'multiple' && selectedEmployees.size > 1;
 
         const payload = {
-            title: finalTitle,
             description: formData.description,
             assigned_to: (isSharedTask || isMultiAssignee) ? null : formData.assignedTo,
             is_shared: isSharedTask,

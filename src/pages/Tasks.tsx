@@ -70,7 +70,6 @@ export default function Tasks() {
 
                     return {
                         id: t.id,
-                        title: t.title,
                         description: t.description,
                         assignedTo: t.assigned_to,
                         assigneeIds: assigneeIds, // Add this to Task type if needed, or just use for filtering locally
@@ -217,7 +216,6 @@ export default function Tasks() {
         // Apply text filter
         if (filter) {
             tasks = tasks.filter(t =>
-                t.title.toLowerCase().includes(filter.toLowerCase()) ||
                 t.description.toLowerCase().includes(filter.toLowerCase())
             );
         }
@@ -313,7 +311,6 @@ export default function Tasks() {
         // Apply text filter
         if (filter) {
             tasks = tasks.filter(t =>
-                t.title.toLowerCase().includes(filter.toLowerCase()) ||
                 t.description.toLowerCase().includes(filter.toLowerCase())
             );
         }
