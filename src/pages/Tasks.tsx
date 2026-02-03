@@ -61,18 +61,20 @@ export default function Tasks() {
             // Fetch Tasks with Assignees
             const { data: taskData } = await supabase
                 .from('tasks')
-                .select('*, task_assignees(employee_id)');
+                .select('*, task_assignees(employee_id), created_by_employee:employees!tasks_created_by_fkey(name)')
+                .order('created_at', { ascending: false });
 
             if (taskData) {
                 let mappedTasks: Task[] = taskData.map((t: any) => {
                     // Check if current user is in assignees list
                     const assigneeIds = t.task_assignees?.map((a: any) => a.employee_id) || [];
+                    const creatorName = t.created_by_employee?.name;
 
                     return {
                         id: t.id,
                         description: t.description,
                         assignedTo: t.assigned_to,
-                        assigneeIds: assigneeIds, // Add this to Task type if needed, or just use for filtering locally
+                        assigneeIds: assigneeIds,
                         isShared: t.is_shared,
                         status: t.status,
                         type: t.type,
@@ -86,7 +88,9 @@ export default function Tasks() {
                             completedAt: t.completed_at
                         },
                         response: t.response,
-                        createdAt: t.created_at
+                        createdAt: t.created_at,
+                        createdBy: t.created_by,
+                        createdByName: creatorName
                     };
                 });
 

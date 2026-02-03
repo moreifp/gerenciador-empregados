@@ -1,4 +1,4 @@
-import { Calendar, CheckCircle2, Circle, Pencil, Trash2, Users, Volume2, VolumeX } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Pencil, Trash2, Users, Volume2, VolumeX, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
@@ -128,13 +128,23 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete }: TaskCardPro
                         <p className={cn("font-medium text-base leading-tight", isCompleted && "text-muted-foreground line-through")}>
                             {task.description}
                         </p>
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+                            <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>{new Date(task.dueDate).toLocaleDateString()}</span>
+                            </div>
+
                             {task.isShared && (
-                                <span className="flex items-center gap-1 ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium">
                                     <Users className="h-3 w-3" />
                                     Todos
+                                </span>
+                            )}
+
+                            {task.createdByName && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium" title="Quem criou esta tarefa">
+                                    <Send className="h-3 w-3" />
+                                    Enviado por: {task.createdByName}
                                 </span>
                             )}
                         </div>

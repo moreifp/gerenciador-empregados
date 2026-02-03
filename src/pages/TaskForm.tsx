@@ -14,7 +14,7 @@ import { TextToSpeech } from '@/components/ui/TextToSpeech';
 export default function TaskForm() {
     const navigate = useNavigate();
     const { id } = useParams();
-    const { role } = useAuth();
+    const { role, user } = useAuth();
     const canEditDetails = role === 'admin';
     const isEmployee = role === 'employee';
     const [searchParams] = useSearchParams();
@@ -46,7 +46,7 @@ export default function TaskForm() {
 
     // Detectar se a tarefa é para o admin
     const isTaskForAdmin = formData.assignedTo === ADMIN_EMPLOYEE_ID ||
-                           (selectionMode === 'single' && selectedEmployees.has(ADMIN_EMPLOYEE_ID));
+        (selectionMode === 'single' && selectedEmployees.has(ADMIN_EMPLOYEE_ID));
 
     useEffect(() => {
         const init = async () => {
@@ -197,6 +197,7 @@ export default function TaskForm() {
             recurrence_day: formData.recurrenceType === 'custom' ? null : formData.recurrenceDay,
             recurrence_days: formData.recurrenceType === 'custom' ? formData.recurrenceDays : null,
             response: formData.response, // Save response/observation
+            created_by: user?.id, // Add creator ID
             ...(isEditing ? {} : { status: 'pending' }) // Only set status on create
             // reference_photo: formData.photoPreview // TODO: Add to schema if needed
         };

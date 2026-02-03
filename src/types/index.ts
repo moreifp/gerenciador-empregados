@@ -42,4 +42,6 @@ export interface Task {
     };
     response?: string; // Campo de resposta/observação
     createdAt: string;
+    createdBy?: string; // ID do funcionário que criou
+    createdByName?: string; // Nome do funcionário que criou (para exibição)
 }
