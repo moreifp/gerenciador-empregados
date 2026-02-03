@@ -126,10 +126,6 @@ export default function Tasks() {
     };
 
     const handleDelete = async (taskId: string) => {
-        if (!window.confirm('Tem certeza que deseja deletar esta tarefa? Esta ação não pode ser desfeita.')) {
-            return;
-        }
-
         try {
             // Delete task assignees first (if any)
             await supabase.from('task_assignees').delete().eq('task_id', taskId);
