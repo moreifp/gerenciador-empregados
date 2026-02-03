@@ -4,6 +4,7 @@ import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
+import { ADMIN_EMPLOYEE_ID } from '@/contexts/AuthContext';
 
 interface TaskCardProps {
     task: Task;
@@ -264,8 +265,8 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveRespons
                         </div>
                     )}
 
-                    {/* Sender Badge - Bottom Right */}
-                    {task.createdByName && (
+                    {/* Sender Badge - Bottom Right (only show for non-admin creators) */}
+                    {task.createdByName && task.createdBy !== ADMIN_EMPLOYEE_ID && (
                         <div className="flex justify-end mt-4">
                             <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold shadow-sm" title="Quem criou esta tarefa">
                                 <Send className="h-3 w-3" />
