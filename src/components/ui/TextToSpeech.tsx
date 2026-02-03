@@ -45,6 +45,54 @@ function scoreVoice(voice: SpeechSynthesisVoice): number {
     return score;
 }
 
+// Função para converter números em palavras (português)
+function numberToWords(num: number): string {
+    const units = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+    const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+    const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+
+    if (num < 10) return units[num];
+    if (num < 20) return teens[num - 10];
+    if (num < 100) {
+        const ten = Math.floor(num / 10);
+        const unit = num % 10;
+        return unit === 0 ? tens[ten] : `${tens[ten]} e ${units[unit]}`;
+    }
+    return num.toString(); // Fallback para números grandes
+}
+
+// Função para preprocessar texto antes de enviar ao TTS
+function preprocessText(text: string): string {
+    let processed = text;
+
+    // Normalizar números (até 99)
+    processed = processed.replace(/\b(\d{1,2})\b/g, (numStr) => {
+        const num = parseInt(numStr);
+        return numberToWords(num);
+    });
+
+    // Normalizar datas (DD/MM/YYYY)
+    processed = processed.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g,
+        (_match, day, month, year) => {
+            const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+                           'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+            const monthIndex = parseInt(month) - 1;
+            return `${day} de ${months[monthIndex] || month} de ${year}`;
+        }
+    );
+
+    // Adicionar pausas após pontuação
+    processed = processed.replace(/\./g, '. ');
+    processed = processed.replace(/,/g, ', ');
+    processed = processed.replace(/:/g, ': ');
+    processed = processed.replace(/;/g, '; ');
+
+    // Remover caracteres que causam problemas
+    processed = processed.replace(/[_*#]/g, '');
+
+    return processed.trim();
+}
+
 export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -81,10 +129,13 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
         // Cancel any existing speech to prevent double-play
         window.speechSynthesis.cancel();
 
+        // Preprocessar texto para melhor pronúncia
+        const processedText = preprocessText(text);
+
         // Create new utterance
-        const utterance = new SpeechSynthesisUtterance(text);
+        const utterance = new SpeechSynthesisUtterance(processedText);
         utterance.lang = 'pt-BR';
-        utterance.rate = 0.9; // Ligeiramente mais lento para melhor compreensão
+        utterance.rate = 0.85; // Mais lento para melhor naturalidade e compreensão
         utterance.pitch = 1.0;
         utterance.volume = 1.0;
 
