@@ -145,12 +145,7 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveRespons
                                 </span>
                             )}
 
-                            {task.createdByName && (
-                                <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full font-medium" title="Quem criou esta tarefa">
-                                    <Send className="h-3 w-3" />
-                                    Enviado por: {task.createdByName}
-                                </span>
-                            )}
+
                         </div>
                     </div>
 
@@ -266,6 +261,17 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveRespons
                     {task.proof?.photoUrl && (
                         <div className="rounded-md overflow-hidden h-20 w-32 bg-slate-100 border">
                             <img src={task.proof.photoUrl} alt="Prova" className="w-full h-full object-cover" />
+                        </div>
+                    )}
+
+                    {/* Sender Badge - Bottom Right */}
+                    {task.createdByName && (
+                        <div className="flex justify-end mt-4">
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg text-xs font-semibold shadow-sm" title="Quem criou esta tarefa">
+                                <Send className="h-3 w-3" />
+                                <span>Enviado por:</span>
+                                <span className="font-bold">{task.createdByName}</span>
+                            </div>
                         </div>
                     )}
                 </div>
