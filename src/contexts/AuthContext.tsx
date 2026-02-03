@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loginAdmin = (password: string) => {
         if (password === '2408') { // Simple hardcoded check
-            const adminUser: User = { id: 'admin', name: 'Administrador', role: 'admin' };
+            const adminUser: User = { id: ADMIN_EMPLOYEE_ID, name: 'Administrador', role: 'admin' };
             setUser(adminUser);
             localStorage.setItem('user', JSON.stringify(adminUser));
             return true;
