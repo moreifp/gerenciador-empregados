@@ -25,13 +25,25 @@ export default function Dashboard() {
 
     const fetchEmployees = async () => {
         try {
-            const { data, error } = await supabase
-                .from('employees')
-                .select('*')
-                .eq('active', true)
-                .order('name');
+            // Fetch Employees and Tasks in PARALLEL for faster loading
+            const [empResult, tasksResult] = await Promise.all([
+                supabase
+                    .from('employees')
+                    .select('*')
+                    .eq('active', true)
+                    .order('name'),
+                supabase
+                    .from('tasks')
+                    .select('assigned_to, is_shared, task_assignees(employee_id)')
+                    .neq('status', 'completed')
+                    .limit(500)
+            ]);
 
-            if (error) throw error;
+            if (empResult.error) throw empResult.error;
+
+            const data = empResult.data;
+            const tasksData = tasksResult.data;
+
             if (data) {
                 // Sort employees: admin first, then others alphabetically
                 const sortedData = (data as any[]).sort((a, b) => {
@@ -42,33 +54,28 @@ export default function Dashboard() {
                     return a.name.localeCompare(b.name);
                 });
                 setEmployees(sortedData as any);
-            }
 
-            // Fetch active tasks for counts
-            const { data: tasksData } = await supabase
-                .from('tasks')
-                .select('assigned_to, is_shared, task_assignees(employee_id)')
-                .neq('status', 'completed');
+                // Calculate task counts
+                if (tasksData) {
+                    const counts: Record<string, number> = {};
+                    // Initialize counts
+                    data.forEach((emp: any) => counts[emp.id] = 0);
 
-            if (tasksData) {
-                const counts: Record<string, number> = {};
-                // Initialize counts
-                if (data) data.forEach((emp: any) => counts[emp.id] = 0);
-
-                tasksData.forEach((task: any) => {
-                    if (task.is_shared) {
-                        // Shared task counts for everyone
-                        Object.keys(counts).forEach(empId => counts[empId]++);
-                    } else if (task.assigned_to) {
-                        if (counts[task.assigned_to] !== undefined) counts[task.assigned_to]++;
-                    } else if (task.task_assignees && task.task_assignees.length > 0) {
-                        // Multi-assignee support
-                        task.task_assignees.forEach((assignee: any) => {
-                            if (counts[assignee.employee_id] !== undefined) counts[assignee.employee_id]++;
-                        });
-                    }
-                });
-                setTaskCounts(counts);
+                    tasksData.forEach((task: any) => {
+                        if (task.is_shared) {
+                            // Shared task counts for everyone
+                            Object.keys(counts).forEach(empId => counts[empId]++);
+                        } else if (task.assigned_to) {
+                            if (counts[task.assigned_to] !== undefined) counts[task.assigned_to]++;
+                        } else if (task.task_assignees && task.task_assignees.length > 0) {
+                            // Multi-assignee support
+                            task.task_assignees.forEach((assignee: any) => {
+                                if (counts[assignee.employee_id] !== undefined) counts[assignee.employee_id]++;
+                            });
+                        }
+                    });
+                    setTaskCounts(counts);
+                }
             }
 
         } catch (error) {

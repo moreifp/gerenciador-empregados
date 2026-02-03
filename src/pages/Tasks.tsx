@@ -38,12 +38,22 @@ export default function Tasks() {
 
     useEffect(() => {
         const fetchData = async () => {
-            // Fetch Employees
-            const { data: empData } = await supabase
-                .from('employees')
-                .select('*')
-                .eq('active', true)
-                .order('name');
+            // Fetch Employees and Tasks in PARALLEL for faster loading
+            const [empResult, taskResult] = await Promise.all([
+                supabase
+                    .from('employees')
+                    .select('*')
+                    .eq('active', true)
+                    .order('name'),
+                supabase
+                    .from('tasks')
+                    .select('*, task_assignees(employee_id), created_by_employee:employees!tasks_created_by_fkey(name)')
+                    .order('created_at', { ascending: false })
+                    .limit(200)
+            ]);
+
+            const empData = empResult.data;
+            const taskData = taskResult.data;
 
             if (empData) {
                 // Ordenar: admin primeiro, depois outros alfabeticamente
@@ -57,12 +67,6 @@ export default function Tasks() {
                 });
                 setEmployees(sortedData as any);
             }
-
-            // Fetch Tasks with Assignees
-            const { data: taskData } = await supabase
-                .from('tasks')
-                .select('*, task_assignees(employee_id), created_by_employee:employees!tasks_created_by_fkey(name)')
-                .order('created_at', { ascending: false });
 
             if (taskData) {
                 let mappedTasks: Task[] = taskData.map((t: any) => {

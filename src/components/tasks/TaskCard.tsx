@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Task, TaskStatus } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { ADMIN_EMPLOYEE_ID } from '@/contexts/AuthContext';
 
 interface TaskCardProps {
@@ -14,7 +14,7 @@ interface TaskCardProps {
     onSaveResponse?: (taskId: string, response: string) => Promise<void>;
 }
 
-export function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveResponse }: TaskCardProps) {
+export const TaskCard = memo(function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveResponse }: TaskCardProps) {
     const isCompleted = task.status === 'completed';
     const [isPlaying, setIsPlaying] = useState(false);
     const [isPlayingResponse, setIsPlayingResponse] = useState(false);
@@ -279,4 +279,4 @@ export function TaskCard({ task, onStatusChange, onEdit, onDelete, onSaveRespons
             </CardContent>
         </Card>
     );
-}
+});
