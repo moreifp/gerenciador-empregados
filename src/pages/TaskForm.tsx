@@ -278,7 +278,7 @@ export default function TaskForm() {
 
             <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
                 {/* Main Content */}
-                {canEditDetails && (
+                {(canEditDetails || isEmployee) && (
                     <Card>
                         <CardHeader className="pb-2">
                             <CardTitle>O que precisa ser feito?</CardTitle>
@@ -295,7 +295,7 @@ export default function TaskForm() {
                                             variant={isRecording ? "destructive" : "secondary"}
                                             size="sm"
                                             onClick={toggleRecording}
-                                            disabled={!canEditDetails}
+                                            disabled={!canEditDetails && !isEmployee}
                                             className="flex items-center gap-2 animate-in fade-in"
                                         >
                                             {isRecording ? <Square className="h-4 w-4 fill-current" /> : <Mic className="h-4 w-4" />}
@@ -310,7 +310,7 @@ export default function TaskForm() {
                                         placeholder={isRecording ? "Ouvindo... vá falando..." : "Descreva os detalhes ou use o microfone para ditar..."}
                                         value={formData.description}
                                         onChange={handleChange}
-                                        disabled={!canEditDetails}
+                                        disabled={!canEditDetails && !isEmployee}
                                     />
                                     {isRecording && (
                                         <span className="absolute bottom-2 right-2 flex h-3 w-3">
@@ -324,7 +324,7 @@ export default function TaskForm() {
                             {/* Photo Upload & Camera */}
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
-                                {canEditDetails ? (
+                                {(canEditDetails || isEmployee) ? (
                                     <PhotoSelector
                                         photoPreview={formData.photoPreview}
                                         onPhotoChange={handlePhotoChange}
