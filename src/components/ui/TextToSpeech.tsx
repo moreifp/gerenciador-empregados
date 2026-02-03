@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { Button } from './button';
 
 interface TextToSpeechProps {
@@ -7,209 +7,137 @@ interface TextToSpeechProps {
     disabled?: boolean;
 }
 
-// Função para pontuar qualidade de vozes pt-BR
-function scoreVoice(voice: SpeechSynthesisVoice): number {
-    let score = 0;
-
-    // Idioma exato
-    if (voice.lang === 'pt-BR') score += 100;
-    else if (voice.lang.startsWith('pt')) score += 50;
-
-    const lowerName = voice.name.toLowerCase();
-
-    // Vozes femininas premium conhecidas (prioridade máxima)
-    if (['luciana', 'francisca', 'joana', 'fernanda', 'monica', 'marcia'].some(name => lowerName.includes(name))) {
-        score += 150;
-    }
-
-    // Forte preferência por vozes femininas (melhor naturalidade em pt-BR)
-    if (lowerName.includes('female') || lowerName.includes('feminina') || lowerName.includes('mulher')) {
-        score += 100;
-    }
-
-    // Penalizar vozes masculinas
-    if (lowerName.includes('male') && !lowerName.includes('female')) {
-        score -= 50;
-    }
-    if (lowerName.includes('masculino') || lowerName.includes('homem')) {
-        score -= 50;
-    }
-
-    // Indicadores de qualidade no nome
-    if (lowerName.includes('premium') || lowerName.includes('enhanced')) score += 60;
-    if (lowerName.includes('neural') || lowerName.includes('wavenet')) score += 70;
-
-    // Vozes online geralmente têm melhor qualidade
-    if (!voice.localService) score += 30;
-
-    return score;
-}
-
-// Função para converter números em palavras (português)
-function numberToWords(num: number): string {
-    const units = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
-    const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
-    const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
-
-    if (num < 10) return units[num];
-    if (num < 20) return teens[num - 10];
-    if (num < 100) {
-        const ten = Math.floor(num / 10);
-        const unit = num % 10;
-        return unit === 0 ? tens[ten] : `${tens[ten]} e ${units[unit]}`;
-    }
-    return num.toString(); // Fallback para números grandes
-}
-
-// Função para preprocessar texto antes de enviar ao TTS
-function preprocessText(text: string): string {
-    let processed = text;
-
-    // Normalizar números (até 99)
-    processed = processed.replace(/\b(\d{1,2})\b/g, (numStr) => {
-        const num = parseInt(numStr);
-        return numberToWords(num);
-    });
-
-    // Normalizar datas (DD/MM/YYYY)
-    processed = processed.replace(/(\d{1,2})\/(\d{1,2})\/(\d{4})/g,
-        (_match, day, month, year) => {
-            const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
-                           'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
-            const monthIndex = parseInt(month) - 1;
-            return `${day} de ${months[monthIndex] || month} de ${year}`;
-        }
-    );
-
-    // Adicionar pausas após pontuação
-    processed = processed.replace(/\./g, '. ');
-    processed = processed.replace(/,/g, ', ');
-    processed = processed.replace(/:/g, ': ');
-    processed = processed.replace(/;/g, '; ');
-
-    // Remover caracteres que causam problemas
-    processed = processed.replace(/[_*#]/g, '');
-
-    return processed.trim();
-}
-
 export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
     const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
     const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-    const isProcessingRef = useRef(false);
 
     useEffect(() => {
         // Cleanup on unmount
         return () => {
-            if (window.speechSynthesis.speaking) {
-                window.speechSynthesis.cancel();
-            }
+            stopSpeaking();
         };
     }, []);
 
-    const handleToggleSpeech = () => {
-        if (!text || disabled) return;
+    const stopSpeaking = () => {
+        // Stop HTML Audio (Google TTS)
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
+        }
 
-        // If already speaking, stop it
-        if (isSpeaking || window.speechSynthesis.speaking) {
+        // Stop Native TTS
+        if (window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-            isProcessingRef.current = false;
-            return;
         }
 
-        // Prevent double-play: check if already processing
-        if (isProcessingRef.current) {
-            return;
-        }
+        setIsSpeaking(false);
+        setIsLoading(false);
+    };
 
-        // Mark as processing to prevent duplicate calls
-        isProcessingRef.current = true;
-
-        // Cancel any existing speech to prevent double-play
+    const speakNative = () => {
+        // Cancel any existing speech
         window.speechSynthesis.cancel();
 
-        // Preprocessar texto para melhor pronúncia
-        const processedText = preprocessText(text);
-
-        // Create new utterance
-        const utterance = new SpeechSynthesisUtterance(processedText);
+        const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'pt-BR';
-        utterance.rate = 0.85; // Mais lento para melhor naturalidade e compreensão
+        utterance.rate = 1.0;
         utterance.pitch = 1.0;
-        utterance.volume = 1.0;
 
-        // Seleção inteligente de voz com cache
+        // Try to select a Brazilian voice
         const voices = window.speechSynthesis.getVoices();
-        const ptVoices = voices.filter(voice => voice.lang.startsWith('pt'));
+        const ptBRVoice = voices.find(voice =>
+            voice.lang === 'pt-BR' ||
+            (voice.lang.includes('pt') && voice.name.includes('Brasil')) ||
+            (voice.lang.includes('pt') && voice.name.includes('Brazil'))
+        );
 
-        // Filtrar apenas vozes femininas se houver disponíveis
-        const femaleVoices = ptVoices.filter(voice => {
-            const lowerName = voice.name.toLowerCase();
-            return (
-                lowerName.includes('female') ||
-                lowerName.includes('feminina') ||
-                lowerName.includes('mulher') ||
-                ['luciana', 'francisca', 'joana', 'fernanda', 'monica', 'marcia'].some(name => lowerName.includes(name)) ||
-                (!lowerName.includes('male') && !lowerName.includes('masculino'))
-            );
-        });
-
-        // Usar vozes femininas se houver, caso contrário usar todas
-        const voicesToConsider = femaleVoices.length > 0 ? femaleVoices : ptVoices;
-
-        // Forçar nova seleção (ignorar cache para garantir melhor voz feminina)
-        let bestVoice: SpeechSynthesisVoice | undefined;
-
-        if (voicesToConsider.length > 0) {
-            // Ordenar por score e pegar a melhor
-            voicesToConsider.sort((a, b) => scoreVoice(b) - scoreVoice(a));
-            bestVoice = voicesToConsider[0];
-
-            // Salvar para próximas vezes
-            localStorage.setItem('preferred-tts-voice', bestVoice.name);
-
-            console.log('Selected best voice:', bestVoice.name, 'Score:', scoreVoice(bestVoice), 'Female voices available:', femaleVoices.length);
+        if (ptBRVoice) {
+            utterance.voice = ptBRVoice;
         }
 
-        if (bestVoice) {
-            utterance.voice = bestVoice;
-        }
-
-        utterance.onstart = () => {
-            setIsSpeaking(true);
-            isProcessingRef.current = false;
-        };
-
-        utterance.onend = () => {
-            setIsSpeaking(false);
-            isProcessingRef.current = false;
-        };
-
+        utterance.onstart = () => setIsSpeaking(true);
+        utterance.onend = () => setIsSpeaking(false);
         utterance.onerror = () => {
             setIsSpeaking(false);
-            isProcessingRef.current = false;
-            console.error('Erro ao reproduzir áudio');
+            console.error('Erro na síntese nativa');
         };
 
         utteranceRef.current = utterance;
         window.speechSynthesis.speak(utterance);
     };
 
-    // Ensure voices are loaded (needed for some browsers like Chrome)
+    const handleToggleSpeech = async () => {
+        if (!text || disabled || isLoading) return;
+
+        if (isSpeaking) {
+            stopSpeaking();
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            // Try Google TTS API
+            const response = await fetch('/api/text-to-speech', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`API returned ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.audio) {
+                throw new Error('No audio content received');
+            }
+
+            // Create audio from base64
+            const audio = new Audio(`data:audio/mp3;base64,${data.audio}`);
+
+            audio.onplay = () => {
+                setIsLoading(false);
+                setIsSpeaking(true);
+            };
+
+            audio.onended = () => {
+                setIsSpeaking(false);
+            };
+
+            audio.onerror = (e) => {
+                console.error("Erro no player de áudio:", e);
+                setIsSpeaking(false);
+                setIsLoading(false);
+                // Try fallback if audio fails to load
+                speakNative();
+            };
+
+            audioRef.current = audio;
+            await audio.play();
+
+        } catch (error) {
+            console.warn('Google TTS API falhou, usando fallback nativo:', error);
+            setIsLoading(false);
+            // Fallback to native synthesis
+            speakNative();
+        }
+    };
+
+    // Ensure native voices are loaded (for fallback)
     useEffect(() => {
         const loadVoices = () => {
             window.speechSynthesis.getVoices();
         };
-
         loadVoices();
         if (window.speechSynthesis.onvoiceschanged !== undefined) {
             window.speechSynthesis.onvoiceschanged = loadVoices;
         }
     }, []);
 
-    // Don't render if no text or speechSynthesis not supported
-    if (!text || !window.speechSynthesis) return null;
+    if (!text) return null;
 
     return (
         <Button
@@ -217,11 +145,16 @@ export function TextToSpeech({ text, disabled = false }: TextToSpeechProps) {
             variant={isSpeaking ? "default" : "outline"}
             size="sm"
             onClick={handleToggleSpeech}
-            disabled={disabled}
+            disabled={disabled || isLoading}
             className={`flex items-center gap-2 ${isSpeaking ? 'animate-pulse' : ''}`}
             title={isSpeaking ? 'Parar leitura' : 'Ler em voz alta'}
         >
-            {isSpeaking ? (
+            {isLoading ? (
+                <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Carregando...</span>
+                </>
+            ) : isSpeaking ? (
                 <>
                     <VolumeX className="h-4 w-4" />
                     <span className="hidden sm:inline">Parar</span>
