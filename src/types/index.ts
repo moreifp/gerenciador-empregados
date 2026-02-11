@@ -27,6 +27,7 @@ export interface Task {
     id: string;
     description: string;
     assignedTo?: string; // Employee ID - optional for shared tasks
+    assigneeIds?: string[]; // Array of employee IDs for multi-assignment
     isShared?: boolean; // True if task is for all employees
     type: TaskType;
     dueDate: string; // ISO Date String
@@ -38,7 +39,7 @@ export interface Task {
         photoUrl?: string;
         audioUrl?: string;
         comment?: string;
-        completedAt: string;
+        completedAt?: string;
     };
     response?: string; // Campo de resposta/observação
     createdAt: string;

@@ -121,12 +121,125 @@ export default function Tasks() {
 
 
     const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
-        const { error } = await supabase.from('tasks').update({ status: newStatus }).eq('id', taskId);
-        if (error) {
-            console.error('Error updating task:', error);
-            return;
+        try {
+            // First, update the task status
+            const { error: updateError } = await supabase
+                .from('tasks')
+                .update({ status: newStatus })
+                .eq('id', taskId);
+
+            if (updateError) {
+                console.error('Error updating task:', updateError);
+                return;
+            }
+
+            // Update local state immediately for better UX
+            setBaseTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+
+            // If task is being marked as completed, check if it's recurring
+            if (newStatus === 'completed') {
+                // Find the task that was just completed
+                const completedTask = baseTasks.find(t => t.id === taskId);
+
+                if (completedTask && completedTask.recurrenceType && completedTask.recurrenceType !== 'none') {
+                    // Fetch full task data from database to ensure we have all fields
+                    const { data: taskData, error: fetchError } = await supabase
+                        .from('tasks')
+                        .select('*')
+                        .eq('id', taskId)
+                        .single();
+
+                    if (fetchError || !taskData) {
+                        console.error('Error fetching task for recreation:', fetchError);
+                        return;
+                    }
+
+                    // Calculate next occurrence date
+                    const { getNextRecurrenceDate } = await import('@/utils/recurrence');
+                    const nextDate = getNextRecurrenceDate(
+                        taskData.due_date,
+                        taskData.recurrence_type,
+                        taskData.recurrence_day,
+                        taskData.recurrence_days
+                    );
+
+                    if (nextDate) {
+                        // Create new task with same data but new due date and pending status
+                        const newTaskData = {
+                            description: taskData.description,
+                            assigned_to: taskData.assigned_to,
+                            is_shared: taskData.is_shared,
+                            status: 'pending',
+                            type: taskData.type,
+                            due_date: nextDate,
+                            recurrence_type: taskData.recurrence_type,
+                            recurrence_day: taskData.recurrence_day,
+                            recurrence_days: taskData.recurrence_days,
+                            response: taskData.response,
+                            created_by: taskData.created_by
+                        };
+
+                        const { data: newTask, error: createError } = await supabase
+                            .from('tasks')
+                            .insert([newTaskData])
+                            .select()
+                            .single();
+
+                        if (createError) {
+                            console.error('Error recreating recurring task:', createError);
+                            return;
+                        }
+
+                        // If task has multiple assignees, recreate those too
+                        if (newTask) {
+                            const { data: assignees } = await supabase
+                                .from('task_assignees')
+                                .select('employee_id')
+                                .eq('task_id', taskId);
+
+                            if (assignees && assignees.length > 0) {
+                                const newAssignees = assignees.map(a => ({
+                                    task_id: newTask.id,
+                                    employee_id: a.employee_id
+                                }));
+
+                                await supabase.from('task_assignees').insert(newAssignees);
+                            }
+
+                            // Add new task to local state
+                            const mappedNewTask: Task = {
+                                id: newTask.id,
+                                description: newTask.description,
+                                assignedTo: newTask.assigned_to,
+                                assigneeIds: assignees?.map(a => a.employee_id) || [],
+                                isShared: newTask.is_shared,
+                                status: newTask.status,
+                                type: newTask.type,
+                                dueDate: newTask.due_date,
+                                recurrenceType: newTask.recurrence_type,
+                                recurrenceDay: newTask.recurrence_day,
+                                proof: {
+                                    photoUrl: undefined,
+                                    audioUrl: undefined,
+                                    comment: undefined,
+                                    completedAt: undefined
+                                },
+                                response: newTask.response,
+                                createdAt: newTask.created_at,
+                                createdBy: newTask.created_by,
+                                createdByName: completedTask.createdByName
+                            };
+
+                            setBaseTasks(prev => [mappedNewTask, ...prev]);
+
+                            console.log(`✅ Recurring task recreated for ${nextDate}`);
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error in handleStatusChange:', error);
         }
-        setBaseTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
     };
 
     const handleEdit = (taskId: string) => {
