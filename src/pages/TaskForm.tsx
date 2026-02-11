@@ -4,7 +4,7 @@ import { ArrowLeft, Save, Mic, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth, ADMIN_EMPLOYEE_ID } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { TaskType } from '@/types';
 import { supabase } from '@/lib/supabase';
 import { Loading } from '@/components/ui/loading';
@@ -280,9 +280,6 @@ export default function TaskForm() {
                 {/* Main Content */}
                 {(canEditDetails || isEmployee) && (
                     <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle>O que precisa ser feito?</CardTitle>
-                        </CardHeader>
                         <CardContent className="space-y-6">
                             {/* Description & Audio */}
                             <div>
@@ -323,7 +320,6 @@ export default function TaskForm() {
 
                             {/* Photo Upload & Camera */}
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Foto de Referência</label>
                                 {(canEditDetails || isEmployee) ? (
                                     <PhotoSelector
                                         photoPreview={formData.photoPreview}
@@ -347,9 +343,6 @@ export default function TaskForm() {
                 {canEditDetails && !isEmployee && !isTaskForAdmin && (
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Responsável</CardTitle>
-                            </CardHeader>
                             <CardContent className="space-y-4">
                                 {/* Selection Mode Buttons */}
                                 <div>
@@ -461,9 +454,6 @@ export default function TaskForm() {
                         </Card>
 
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Agendamento</CardTitle>
-                            </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Data de Início</label>
@@ -578,9 +568,6 @@ export default function TaskForm() {
 
                 {/* Response / Observations Field */}
                 <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle>Resposta / Observações</CardTitle>
-                    </CardHeader>
                     <CardContent className="space-y-4">
                         <div>
                             <div className="flex flex-wrap justify-between items-center gap-2 mb-2">
@@ -619,7 +606,6 @@ export default function TaskForm() {
 
                         {/* Photo for Response/Observations */}
                         <div>
-                            <label className="text-sm font-medium mb-2 block">Foto da Observação</label>
                             <PhotoSelector
                                 photoPreview={formData.responsePhotoPreview}
                                 onPhotoChange={handleResponsePhotoChange}
